@@ -1,5 +1,14 @@
 # 简易RPC框架
 
+## 项目结构
+
+- **/rpc-core**：RPC框架核心部分
+- **/rpc-samples/***：RPC案例
+- **/rpc-samples/server**：案例服务端
+- **/rpc-samples/client**：案例客户端
+
+**旧项目地址**：https://github.com/StellarisJAY/SimpleRPC
+
 ## 目标
 1、完成Spring整合   √
 
