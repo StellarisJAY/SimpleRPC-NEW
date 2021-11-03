@@ -1,0 +1,6 @@
+/rpc-core/target/
+/.idea/
+/SimpleRpc.iml
+/rpc-samples/server/target/
+/rpc-samples/sample-api/target/
+/rpc-samples/client/target/
