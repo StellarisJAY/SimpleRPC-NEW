@@ -1,4 +1,4 @@
-package com.jay.rpc.config;
+package com.jay.rpc.config.condition;
 
 import org.springframework.context.annotation.Condition;
 import org.springframework.context.annotation.ConditionContext;
@@ -6,7 +6,8 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
 
 /**
  * <p>
- *
+ *    判断是否需要满足创建ZooKeeper相关Bean的条件
+ *    即，rpc.service.registry.type是否等于zookeeper
  * </p>
  *
  * @author Jay

@@ -1,14 +1,12 @@
 package com.jay.rpc.registry.impl;
 
-import com.jay.rpc.registry.IRegistry;
+import com.jay.rpc.registry.Registry;
 import com.jay.rpc.util.ZookeeperUtil;
 import org.apache.zookeeper.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 
-import javax.annotation.Resource;
 import java.util.List;
 
 /**
@@ -19,15 +17,23 @@ import java.util.List;
  * @author Jay
  * @date 2021/10/28
  **/
-public class ZooKeeperRegistry implements IRegistry {
+public class ZooKeeperRegistry extends Registry {
 
     private static final String PATH_PREFIX = "/rpc/services";
 
     private static final Logger logger = LoggerFactory.getLogger(ZooKeeperRegistry.class);
 
+    /**
+     * ZooKeeper工具
+     * 包括ZooKeeper连接，以及各种操作的封装
+     */
     private ZookeeperUtil zookeeperUtil;
 
 
+    /**
+     * 通过该构造方法创建服务注册中心
+     * @param zookeeperUtil zkUtil
+     */
     public ZooKeeperRegistry(ZookeeperUtil zookeeperUtil) {
         this.zookeeperUtil = zookeeperUtil;
     }
@@ -61,6 +67,11 @@ public class ZooKeeperRegistry implements IRegistry {
         }
         // 创建服务地址-临时节点
         zookeeperUtil.createEphemeral(serviceAddrPath, address, ZooDefs.Ids.OPEN_ACL_UNSAFE);
+    }
+
+    @Override
+    public void heartBeat(String applicationName, String address) {
+
     }
 
     /**

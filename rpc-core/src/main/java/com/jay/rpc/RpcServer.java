@@ -2,8 +2,7 @@ package com.jay.rpc;
 
 import com.jay.rpc.annotation.RpcService;
 import com.jay.rpc.discovery.ServiceMapper;
-import com.jay.rpc.registry.IRegistry;
-import com.jay.rpc.registry.impl.ZooKeeperRegistry;
+import com.jay.rpc.registry.Registry;
 import com.jay.rpc.handler.RpcDecoder;
 import com.jay.rpc.handler.RpcEncoder;
 import com.jay.rpc.handler.RpcRequestHandler;
@@ -50,7 +49,7 @@ public class RpcServer implements ApplicationContextAware {
     private ApplicationContext context;
 
     @Resource
-    private IRegistry serviceRegistry;
+    private Registry serviceRegistry;
 
     /**
      * 初始化Netty服务器
@@ -95,6 +94,8 @@ public class RpcServer implements ApplicationContextAware {
             String host = localHost.getHostAddress() + ":" + port;
             // 注册到Zookeeper
             serviceRegistry.registerService(applicationName, host);
+            // 开启心跳
+            serviceRegistry.startHearBeat(applicationName, host);
             logger.info("服务注册成功，服务名称：{}", applicationName);
 
             int serviceCount = doServiceScan();
@@ -125,9 +126,7 @@ public class RpcServer implements ApplicationContextAware {
      */
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        if(applicationContext != null){
-            this.context = applicationContext;
-        }
+        this.context = applicationContext;
     }
 
     /**

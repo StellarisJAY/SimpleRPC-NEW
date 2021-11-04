@@ -14,8 +14,9 @@
     <properties>
         <protostuff.version>1.7.4</protostuff.version>
         <nettry.version>4.1.33.Final</nettry.version>
-        <spring.version>4.3.7.RELEASE</spring.version>
+        <spring.version>5.3.9</spring.version>
         <zookeeper.version>3.4.8</zookeeper.version>
+        <jedis.version>2.9.0</jedis.version>
     </properties>
 
     <dependencies>
@@ -77,6 +78,7 @@
             </exclusions>
         </dependency>
 
+
         <!--Zookeeper-->
         <dependency>
             <groupId>org.apache.zookeeper</groupId>
@@ -90,6 +92,15 @@
             </exclusions>
         </dependency>
 
+        <!--redis-->
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>${jedis.version}</version>
+        </dependency>
+
+        <!--log-->
+
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -100,6 +111,12 @@
             <artifactId>slf4j-log4j12</artifactId>
             <version>1.7.7</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot</artifactId>
+            <version>2.5.3</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

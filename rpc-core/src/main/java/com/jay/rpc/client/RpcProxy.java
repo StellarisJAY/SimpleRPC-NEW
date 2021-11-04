@@ -1,7 +1,6 @@
 package com.jay.rpc.client;
 
-import com.jay.rpc.registry.IRegistry;
-import com.jay.rpc.registry.impl.ZooKeeperRegistry;
+import com.jay.rpc.registry.Registry;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
 import io.netty.util.internal.StringUtil;
@@ -23,7 +22,7 @@ import java.lang.reflect.Proxy;
 public class RpcProxy {
 
     @Resource
-    private IRegistry serviceRegistry;
+    private Registry serviceRegistry;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcProxy.class);
     @SuppressWarnings("unchecked")
@@ -33,13 +32,15 @@ public class RpcProxy {
             对调用的方法生成代理，代理方法中通过发送RPC请求来获取返回值
          */
         Object proxyInstance = Proxy.newProxyInstance(clazz.getClassLoader(), new Class[]{clazz}, (proxy, method, args) -> {
+            // 从注册中心获取地址
             String address = serviceRegistry.getServiceAddress(serviceName);
             if(StringUtil.isNullOrEmpty(address)){
                 throw new RuntimeException("无法找到服务实现");
             }
+            // 切分出端口
             int split = address.indexOf(":");
             int port = Integer.parseInt(address.substring(split + 1));
-
+            // 创建RPC客户端
             RpcClient client = new RpcClient(address.substring(0, split), port);
             // 创建RPC请求
             RpcRequest request = new RpcRequest();

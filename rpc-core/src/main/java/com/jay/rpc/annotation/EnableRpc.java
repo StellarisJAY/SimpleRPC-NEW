@@ -13,6 +13,9 @@ import java.lang.annotation.Target;
 /**
  * RPC启动注解
  * 将自动导入RPC服务器、Zookeeper服务注册等Bean
+ * 该注解将导入RpcServer来启动一个RPC服务器
+ * 导入RpcAutoConfiguration完成了其他Bean的配置
+ * RpcProxy提供了客户端所需的动态代理
  * @author Jay
  */
 @Retention(RetentionPolicy.RUNTIME)

@@ -1,7 +1,5 @@
 package com.jay.rpc.discovery;
 
-import org.springframework.stereotype.Component;
-
 import java.util.HashMap;
 
 /**
