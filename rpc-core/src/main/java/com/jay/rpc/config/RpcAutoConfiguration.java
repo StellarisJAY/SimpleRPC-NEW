@@ -10,10 +10,14 @@ import com.jay.rpc.util.ZookeeperUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
+import org.springframework.lang.Nullable;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
 import java.io.IOException;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 
 /**
@@ -52,8 +56,12 @@ public class RpcAutoConfiguration {
     public Registry redisRegistry(@Value("${rpc.service.registry.redis.host}") String host,
                                   @Value("${rpc.service.registry.redis.port}") int port,
                                   @Value("${rpc.service.registry.redis.password}") String password,
-                                  @Value("${rpc.service.registry.redis.timeout}") int timeout){
+                                  @Value("${rpc.service.registry.redis.max-wait-millis}") long maxWaitTime){
         JedisPoolConfig poolConfig = new JedisPoolConfig();
+        // max-wait-millis 默认值是-1，如果不设置会导致getResource失败时阻塞
+        long maxWaitMillis = OptionalLong.of(maxWaitTime).orElse(5000);
+        poolConfig.setMaxWaitMillis(maxWaitMillis);
+
         JedisPool jedisPool = new JedisPool(poolConfig, host, port);
         RedisUtil redisUtil = new RedisUtil(jedisPool);
         return new RedisRegistry(redisUtil);

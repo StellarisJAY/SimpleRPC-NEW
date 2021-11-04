@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class Registry {
 
-    protected ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
+    protected ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1, r -> new Thread(r, "heart-beat"));
     protected int heartBeatTime = 30;
     /**
      * 获取服务地址

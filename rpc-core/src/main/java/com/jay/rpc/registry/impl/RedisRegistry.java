@@ -45,7 +45,8 @@ public class RedisRegistry extends Registry {
         String rootKey = KEY_PREFIX + applicationName;
         String addressKey = rootKey + ".address";
         String addrValue = redisUtil.get(addressKey);
-        if(!StringUtils.isEmpty(addrValue)){
+        // key已被占用，且地址不同
+        if(!StringUtils.isEmpty(addrValue) && !addrValue.equals(address)){
             throw new RuntimeException("服务名已被注册");
         }
 
