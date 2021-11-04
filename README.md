@@ -9,18 +9,20 @@
 
 **旧项目地址**：https://github.com/StellarisJAY/SimpleRPC
 
+
+
 ## 目标
-1、完成Spring整合   √
-
-2、完善协议格式
-
-3、完善序列化过程
-
-4.1、整合Zookeeper作为服务注册中心 √
-
-4.2、Zookeeper做服务发现 √
-
-4.3、服务注册中心抽象，通过配置切换注册中心 
+- [x] 完成Spring整合   
+- [ ] 完善协议格式
+- [ ] 完善序列化过程
+- [x] 整合Zookeeper作为服务注册中心 
+- [x] Zookeeper做服务发现 
+- [x] 服务注册中心抽象，通过配置切换注册中心  
+- [x] 整合 Redis 作为服务注册中心 
+- [x] 服务心跳，用于续约服务和状态检测 
+- [ ] 服务管理中心页面
+- [ ] 服务心跳包
+- [ ] 服务熔断
 
 ## 使用说明   
 
@@ -42,7 +44,7 @@
 # RPC服务器地址
 rpc.service.port=8000
 
-# 配置注册中心类型，现在仅支持ZooKeeper
+# 配置注册中心类型，现支持ZooKeeper和Redis
 rpc.service.registry.type=zookeeper
 
 # Zookeeper地址
@@ -103,6 +105,21 @@ public class HelloController {
 ```
 
 调用代理对象的方法将会从Zookeeper找到服务提供方的地址，然后发送RPC请求获取执行结果。
+
+### 使用 Redis 作为服务注册中心
+
+在配置文件添加以下内容：
+
+```properties
+# 配置注册中心类型
+rpc.service.registry.type=redis
+# redis 地址
+rpc.service.registry.redis.host=localhost
+rpc.service.registry.redis.port=6379
+# 密码
+rpc.service.registry.redis.password=
+rpc.service.registry.redis.max-wait-millis=4000
+```
 
 
 
