@@ -29,8 +29,9 @@ public class RedisUtil {
      * @return String
      */
     public String get(String key){
-        Jedis jedis = jedisPool.getResource();
-        return jedis.get(key);
+        try(Jedis jedis = jedisPool.getResource()){
+            return jedis.get(key);
+        }
     }
 
     /**
@@ -39,8 +40,9 @@ public class RedisUtil {
      * @param value value
      */
     public void set(String key, String value){
-        Jedis jedis = jedisPool.getResource();
-        jedis.set(key, value);
+        try(Jedis jedis = jedisPool.getResource()){
+            jedis.set(key, value);
+        }
     }
 
     /**
@@ -51,9 +53,10 @@ public class RedisUtil {
      * @param timeUnit TimeUnit
      */
     public void setEx(String key, String value, int expireTime, TimeUnit timeUnit){
-        Jedis jedis = jedisPool.getResource();
-        long seconds = timeUnit.toSeconds(expireTime);
-        jedis.setex(key, (int) seconds, value);
+        try(Jedis jedis = jedisPool.getResource()){
+            long seconds = timeUnit.toSeconds(expireTime);
+            jedis.setex(key, (int) seconds, value);
+        }
     }
 
     /**
@@ -61,7 +64,8 @@ public class RedisUtil {
      * @param key key
      */
     public void delete(String key){
-        Jedis jedis = jedisPool.getResource();
-        jedis.del(key);
+        try(Jedis jedis = jedisPool.getResource()){
+            jedis.del(key);
+        }
     }
 }
