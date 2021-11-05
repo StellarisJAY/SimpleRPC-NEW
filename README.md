@@ -3,6 +3,7 @@
 ## 项目结构
 
 - **/rpc-core**：RPC框架核心部分
+- **/rpc-admin**：管理平台
 - **/rpc-samples/***：RPC案例
 - **/rpc-samples/server**：案例服务端
 - **/rpc-samples/client**：案例客户端

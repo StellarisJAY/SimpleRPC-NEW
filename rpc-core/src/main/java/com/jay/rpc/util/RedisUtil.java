@@ -3,6 +3,7 @@ package com.jay.rpc.util;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -34,6 +35,12 @@ public class RedisUtil {
         }
     }
 
+    public byte[] getBytes(String key){
+        try(Jedis jedis = jedisPool.getResource()){
+            return jedis.get(key.getBytes());
+        }
+    }
+
     /**
      * set
      * @param key key
@@ -42,6 +49,17 @@ public class RedisUtil {
     public void set(String key, String value){
         try(Jedis jedis = jedisPool.getResource()){
             jedis.set(key, value);
+        }
+    }
+
+    /**
+     * set bytes
+     * @param key key
+     * @param value byte[]
+     */
+    public void set(String key, byte[] value){
+        try(Jedis jedis = jedisPool.getResource()){
+            jedis.set(key.getBytes(), value);
         }
     }
 
@@ -66,6 +84,17 @@ public class RedisUtil {
     public void delete(String key){
         try(Jedis jedis = jedisPool.getResource()){
             jedis.del(key);
+        }
+    }
+
+    /**
+     * keys
+     * @param pattern pattern
+     * @return Set
+     */
+    public Set<String> keys(String pattern){
+        try(Jedis jedis = jedisPool.getResource()){
+            return jedis.keys(pattern);
         }
     }
 }

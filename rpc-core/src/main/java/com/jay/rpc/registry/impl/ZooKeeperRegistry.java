@@ -1,5 +1,6 @@
 package com.jay.rpc.registry.impl;
 
+import com.jay.rpc.registry.ApplicationInfo;
 import com.jay.rpc.registry.Registry;
 import com.jay.rpc.util.ZookeeperUtil;
 import org.apache.zookeeper.*;
@@ -79,13 +80,8 @@ public class ZooKeeperRegistry extends Registry {
      * @return Zookeeper中的所有服务
      */
     @Override
-    public List<String> discoverService(){
-        try {
-            return zookeeperUtil.listChildren(PATH_PREFIX);
-        } catch (KeeperException | InterruptedException e) {
-            logger.error("服务发现出现异常", e);
-            return null;
-        }
+    public List<ApplicationInfo> discoverService(){
+        return null;
     }
 
     /**
