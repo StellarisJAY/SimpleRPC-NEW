@@ -1,5 +1,7 @@
 package com.jay.rpc.registry;
 
+import com.jay.rpc.discovery.ServiceMapper;
+
 import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -24,7 +26,7 @@ public abstract class Registry {
      * 服务发现
      * @return List
      */
-    public abstract List<String> discoverService();
+    public abstract List<ApplicationInfo> discoverService();
 
     /**
      * 注册服务
@@ -51,5 +53,16 @@ public abstract class Registry {
     public void startHearBeat(String applicationName, String address){
         // 延迟一个周期开启
         executor.scheduleAtFixedRate(()->{heartBeat(applicationName, address);}, heartBeatTime, heartBeatTime, TimeUnit.SECONDS);
+    }
+
+    public ApplicationInfo getApplicationInfo(String applicationName, String address){
+        ApplicationInfo applicationInfo = new ApplicationInfo();
+        applicationInfo.setApplicationName(applicationName);
+        applicationInfo.setAddress(address);
+        applicationInfo.setLastHeartBeatTime(System.currentTimeMillis());
+        applicationInfo.setServiceCount(ServiceMapper.getServiceCount());
+        applicationInfo.setServiceInterfaces(ServiceMapper.getServiceInterfaces());
+
+        return applicationInfo;
     }
 }

@@ -1,6 +1,7 @@
 package com.jay.rpc.discovery;
 
 import java.util.HashMap;
+import java.util.Set;
 
 /**
  * <p>
@@ -38,5 +39,13 @@ public class ServiceMapper {
      */
     public static Object getServiceImpl(Class<?> service){
         return map.get(service);
+    }
+
+    public static int getServiceCount(){
+        return map.size();
+    }
+
+    public static Set<Class<?>> getServiceInterfaces(){
+        return map.keySet();
     }
 }

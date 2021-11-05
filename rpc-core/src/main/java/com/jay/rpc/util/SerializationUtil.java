@@ -1,9 +1,11 @@
 package com.jay.rpc.util;
 
+import com.alibaba.fastjson.JSON;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffIOUtil;
 import io.protostuff.Schema;
 import io.protostuff.runtime.RuntimeSchema;
+import org.springframework.boot.jackson.JsonObjectSerializer;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,5 +51,13 @@ public class SerializationUtil {
             }
         }
         return schema;
+    }
+
+    public static String serializeJSON(Object object){
+        return JSON.toJSONString(object);
+    }
+
+    public static <T> T deserializeJSON(String jsonString, Class<T> clazz){
+        return JSON.parseObject(jsonString, clazz);
     }
 }

@@ -118,5 +118,12 @@
             <version>2.5.3</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- fastjson -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.70</version>
+        </dependency>
     </dependencies>
 </project>
