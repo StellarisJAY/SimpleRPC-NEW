@@ -12,7 +12,7 @@
 
 
 
-## 目标
+## 项目目标
 - [x] 完成Spring整合   
 - [ ] 完善协议格式
 - [ ] 完善序列化过程
@@ -21,9 +21,10 @@
 - [x] 服务注册中心抽象，通过配置切换注册中心  
 - [x] 整合 Redis 作为服务注册中心 
 - [x] 服务心跳，用于续约服务和状态检测 
-- [ ] 服务管理中心页面
-- [ ] 服务心跳包
-- [ ] 服务熔断
+- [x] 用户自定义过滤器
+- [ ] 权限验证
+- [x] 服务端流量控制（guava RateLimiter）
+- [ ] 管理中心（服务管理、流量监控、执行日志、限流）
 
 ## 使用说明   
 
@@ -39,7 +40,7 @@
 </dependency>		
 ```
 
-#### 启动Zookeeper并在配置文件中添加
+#### 配置文件
 
 ```properties
 # RPC服务器地址
@@ -82,16 +83,16 @@ public class HelloServiceImpl implements HelloService{
 
 ### 服务调用方（客户端）
 
-同服务端，添加Maven、添加配置、添加@EnableRpc注解。
+同服务端，添加Maven、添加配置、添加**@EnableRpc**注解。
 
-### 获取代理对象
+#### 远程调用
 
-使用RpcProxy类的create方法创建代理对象，第一个参数为类型，第二个参数为服务提供方的服务名称。
+使用**RpcProxy**类的create方法创建代理对象，第一个参数为类型，第二个参数为服务提供方的服务名称。
 
 ```java
 @RestController
 public class HelloController {
-    // 注入 Rpc代理工具
+    // Rpc代理工具
     @Resource
     private RpcProxy rpcProxy;
 
@@ -105,7 +106,7 @@ public class HelloController {
 
 ```
 
-调用代理对象的方法将会从Zookeeper找到服务提供方的地址，然后发送RPC请求获取执行结果。
+调用代理对象的方法将会从**服务注册中心**找到服务提供方的地址，然后发送RPC请求获取执行结果。
 
 ### 使用 Redis 作为服务注册中心
 
@@ -122,7 +123,44 @@ rpc.service.registry.redis.password=
 rpc.service.registry.redis.max-wait-millis=4000
 ```
 
+### 用户自定义过滤器
+
+1. 创建过滤器类，继承自**Filter**。
+2. 实现**doFilter**方法，通过返回值boolean或抛出异常来控制过滤。
+3. 使用**@Component**将过滤器配置为Spring容器管理。
+
+```java
+@Component
+public class MyFilter extends Filter {
+
+    private Logger logger = LoggerFactory.getLogger(filterName);
+
+    public MyFilter() {
+        super("my-filter");
+    }
+
+    @Override
+    public boolean doFilter(ChannelHandlerContext context, RpcRequest request) throws FilteredException {
+        logger.info("执行过滤器：{}", filterName);
+        return true;
+    }
+}
+```
+
+### 限流器配置
+
+修改配置文件开启限流器
+
+```properties
+# 开启限流
+rpc.traffic.enable-control=true
+# 每秒允许的请求数量
+rpc.traffic.permits-per-second=100
+```
+
 
 
 ## 原理简介
+
+![RPC-network](C:\Users\76040\Desktop\RPC-network.png)
 
