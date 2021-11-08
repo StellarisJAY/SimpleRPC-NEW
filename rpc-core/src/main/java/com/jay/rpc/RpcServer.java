@@ -42,11 +42,13 @@ public class RpcServer implements ApplicationContextAware {
     private final NioEventLoopGroup workerGroup = new NioEventLoopGroup();
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    @Value("${rpc.service.port}")
+    @Value("${rpc.service.port:9000}")
     private String port;
 
     @Value("${spring.application.name}")
     private String applicationName;
+    @Value("${rpc.traffic.permits-per-second:1000}")
+    private int permitsPerSecond;
 
     private ApplicationContext context;
 
@@ -73,7 +75,7 @@ public class RpcServer implements ApplicationContextAware {
                         ChannelPipeline pipeline = channel.pipeline();
                         // Rpc解码器
                         pipeline.addLast(new RpcDecoder());
-                        pipeline.addLast(new TrafficControlFilter());
+                        pipeline.addLast(new TrafficControlFilter(permitsPerSecond));
                         // 注册用户自定义过滤器
                         for(Filter filter : filters){
                             pipeline.addLast(filter);

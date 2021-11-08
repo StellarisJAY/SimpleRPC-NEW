@@ -21,10 +21,25 @@ public class TrafficControlFilter extends Filter {
     /**
      * RateLimiter 限流器
      */
-    private static RateLimiter rateLimiter = RateLimiter.create(1);
+    private static RateLimiter rateLimiter;
 
-    public TrafficControlFilter() {
+    public TrafficControlFilter(int rate) {
         super("default-traffic-control-filter");
+        createRateLimiter(rate);
+    }
+
+    /**
+     * DCL 创建RateLimiter懒加载单例
+     * @param rate rate
+     */
+    private void createRateLimiter(int rate){
+        if(rateLimiter == null){
+            synchronized (TrafficControlFilter.class){
+                if(rateLimiter == null){
+                    rateLimiter = RateLimiter.create(rate);
+                }
+            }
+        }
     }
 
     @Override
