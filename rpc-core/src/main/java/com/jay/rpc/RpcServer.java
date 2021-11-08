@@ -47,6 +47,9 @@ public class RpcServer implements ApplicationContextAware {
 
     @Value("${spring.application.name}")
     private String applicationName;
+
+    @Value("${rpc.traffic.enable-control:true")
+    private boolean enableTrafficControl;
     @Value("${rpc.traffic.permits-per-second:1000}")
     private int permitsPerSecond;
 
@@ -75,7 +78,10 @@ public class RpcServer implements ApplicationContextAware {
                         ChannelPipeline pipeline = channel.pipeline();
                         // Rpc解码器
                         pipeline.addLast(new RpcDecoder());
-                        pipeline.addLast(new TrafficControlFilter(permitsPerSecond));
+                        // 限流器
+                        if(enableTrafficControl){
+                            pipeline.addLast(new TrafficControlFilter(permitsPerSecond));
+                        }
                         // 注册用户自定义过滤器
                         for(Filter filter : filters){
                             pipeline.addLast(filter);
