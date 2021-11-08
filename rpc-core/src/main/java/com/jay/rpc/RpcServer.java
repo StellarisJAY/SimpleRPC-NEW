@@ -73,7 +73,7 @@ public class RpcServer implements ApplicationContextAware {
                         ChannelPipeline pipeline = channel.pipeline();
                         // Rpc解码器
                         pipeline.addLast(new RpcDecoder());
-
+                        pipeline.addLast(new TrafficControlFilter());
                         // 注册用户自定义过滤器
                         for(Filter filter : filters){
                             pipeline.addLast(filter);
@@ -101,7 +101,7 @@ public class RpcServer implements ApplicationContextAware {
             // 获取服务地址
             InetAddress localHost = InetAddress.getLocalHost();
             String host = localHost.getHostAddress() + ":" + port;
-            // 注册到Zookeeper
+            // 注册到服务注册中心
             serviceRegistry.registerService(applicationName, host);
             // 开启心跳
             serviceRegistry.startHearBeat(applicationName, host);
