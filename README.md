@@ -162,5 +162,5 @@ rpc.traffic.permits-per-second=100
 
 ## 原理简介
 
-![RPC-network](C:\Users\76040\Desktop\RPC-network.png)
+![RPC-network](https://images-1257369645.cos.ap-chengdu.myqcloud.com/notes/RPC-network.png)
 
