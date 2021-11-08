@@ -2,10 +2,9 @@ package com.jay.rpc;
 
 import com.jay.rpc.annotation.RpcService;
 import com.jay.rpc.discovery.ServiceMapper;
+import com.jay.rpc.handler.*;
+import com.jay.rpc.handler.filter.TrafficControlFilter;
 import com.jay.rpc.registry.Registry;
-import com.jay.rpc.handler.RpcDecoder;
-import com.jay.rpc.handler.RpcEncoder;
-import com.jay.rpc.handler.RpcRequestHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -24,8 +23,11 @@ import org.springframework.context.ApplicationContextAware;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.net.InetAddress;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -48,6 +50,7 @@ public class RpcServer implements ApplicationContextAware {
 
     private ApplicationContext context;
 
+    private Set<Filter> filters;
     @Resource
     private Registry serviceRegistry;
 
@@ -70,8 +73,14 @@ public class RpcServer implements ApplicationContextAware {
                         ChannelPipeline pipeline = channel.pipeline();
                         // Rpc解码器
                         pipeline.addLast(new RpcDecoder());
+
+                        // 注册用户自定义过滤器
+                        for(Filter filter : filters){
+                            pipeline.addLast(filter);
+                        }
                         // Rpc请求处理器
                         pipeline.addLast(new RpcRequestHandler(context));
+
                         // Rpc编码器
                         pipeline.addLast(new RpcEncoder());
                     }
@@ -127,6 +136,10 @@ public class RpcServer implements ApplicationContextAware {
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.context = applicationContext;
+        // Filter获取
+        Map<String, Filter> filters = applicationContext.getBeansOfType(Filter.class);
+        logger.info("共发现自定义过滤器：{} 个", filters.size());
+        this.filters = new HashSet<>(filters.values());
     }
 
     /**
