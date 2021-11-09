@@ -2,12 +2,14 @@ package com.jay.rpc.registry.impl;
 
 import com.jay.rpc.registry.ApplicationInfo;
 import com.jay.rpc.registry.Registry;
+import com.jay.rpc.util.SerializationUtil;
 import com.jay.rpc.util.ZookeeperUtil;
 import org.apache.zookeeper.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -60,11 +62,18 @@ public class ZooKeeperRegistry extends Registry {
             throw new RuntimeException("服务名已被注册");
         }
 
+        // 生成服务器信息
+        ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
+        applicationInfo.setAlive(true);
+        // 序列化
+        String serializedInfo = SerializationUtil.serializeJSON(applicationInfo);
+        // 写入ZooKeeper
         if(!zookeeperUtil.exists(serviceRootPath)){
             // 节点不存在，创建服务信息-持久节点
-            zookeeperUtil.createPersistent(serviceRootPath, "info", ZooDefs.Ids.OPEN_ACL_UNSAFE);
+            zookeeperUtil.createPersistent(serviceRootPath, serializedInfo, ZooDefs.Ids.OPEN_ACL_UNSAFE);
         }else{
             // 更新服务信息
+            zookeeperUtil.setData(serviceRootPath, serializedInfo, 0);
         }
         // 创建服务地址-临时节点
         zookeeperUtil.createEphemeral(serviceAddrPath, address, ZooDefs.Ids.OPEN_ACL_UNSAFE);
@@ -72,7 +81,14 @@ public class ZooKeeperRegistry extends Registry {
 
     @Override
     public void heartBeat(String applicationName, String address) {
-
+        ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
+        String serialized = SerializationUtil.serializeJSON(applicationInfo);
+        try {
+            zookeeperUtil.setData(PATH_PREFIX + "/" + applicationName, serialized, 0);
+        } catch (Exception e) {
+            logger.error("心跳出现异常", e);
+            throw new RuntimeException("心跳异常");
+        }
     }
 
     /**
@@ -81,7 +97,23 @@ public class ZooKeeperRegistry extends Registry {
      */
     @Override
     public List<ApplicationInfo> discoverService(){
-        return null;
+        try {
+            List<String> applicationNames = zookeeperUtil.listChildren("/rpc/services");
+            List<ApplicationInfo> infos = new ArrayList<>(applicationNames.size());
+            for (String applicationName : applicationNames) {
+                // 获取 info 节点数据
+                String serializedInfo = zookeeperUtil.getData(PATH_PREFIX + "/" + applicationName);
+                ApplicationInfo info = SerializationUtil.deserializeJSON(serializedInfo, ApplicationInfo.class);
+                // 判断是否存在地址节点，即检查节点是否还存活
+                boolean alive = zookeeperUtil.exists(PATH_PREFIX + "/" + applicationName + "/address");
+                info.setAlive(alive);
+                infos.add(info);
+            }
+            return infos;
+        } catch (Exception e) {
+            logger.error("服务发现出现异常", e);
+            throw new RuntimeException("服务发现出现异常");
+        }
     }
 
     /**

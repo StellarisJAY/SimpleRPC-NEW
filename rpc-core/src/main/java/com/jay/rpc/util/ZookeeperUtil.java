@@ -26,7 +26,7 @@ public class ZookeeperUtil {
      */
     private ZooKeeper zooKeeper;
     private String zkHosts;
-    private int sessionTimeout = 4000;
+    private int sessionTimeout;
     private Logger LOGGER = LoggerFactory.getLogger(ZookeeperUtil.class);
 
 
@@ -95,14 +95,6 @@ public class ZookeeperUtil {
     }
 
     /**
-     * 获取连接状态
-     * @return boolean
-     */
-    public boolean checkConnection(){
-        return zooKeeper != null && zooKeeper.getState() == ZooKeeper.States.CONNECTED;
-    }
-
-    /**
      * 列出某路径下的子节点
      * @param path path
      * @return List
@@ -128,5 +120,9 @@ public class ZookeeperUtil {
         Stat stat = new Stat();
         byte[] data = zooKeeper.getData(path, false, stat);
         return new String(data, StandardCharsets.UTF_8);
+    }
+
+    public void setData(String path, String data, int version) throws KeeperException, InterruptedException {
+        zooKeeper.setData(path, data.getBytes(), version);
     }
 }

@@ -28,7 +28,7 @@ public class RedisRegistry extends Registry {
     private final RedisUtil redisUtil;
     private final String KEY_SERVICE_PREFIX = "rpc.service.";
     private final String KEY_ADDRESS_PREFIX = "rpc.address.";
-    private Logger LOGGER = LoggerFactory.getLogger(this.getClass());
+    private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
 
     public RedisRegistry(RedisUtil redisUtil) {
         this.redisUtil = redisUtil;
@@ -66,7 +66,10 @@ public class RedisRegistry extends Registry {
         String rootKey = KEY_SERVICE_PREFIX + applicationName;
         String addressKey = KEY_ADDRESS_PREFIX + applicationName;
 
-        // key已被占用，且地址不同
+        /*
+            Redis 每条指令是原子的，但是多条指令不是
+            多线程下可能导致多个服务注册到一个名字下
+         */
         String addrValue = redisUtil.get(addressKey);
         if(!StringUtils.isEmpty(addrValue) && !addrValue.equals(address)){
             throw new RuntimeException("服务名已被注册");
