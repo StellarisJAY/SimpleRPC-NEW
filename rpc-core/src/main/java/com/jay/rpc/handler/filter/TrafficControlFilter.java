@@ -17,11 +17,10 @@ import org.slf4j.LoggerFactory;
  * @date 2021/11/8
  **/
 public class TrafficControlFilter extends Filter {
-    private Logger logger = LoggerFactory.getLogger(TrafficControlFilter.class);
     /**
      * RateLimiter 限流器
      */
-    private static RateLimiter rateLimiter;
+    private static volatile RateLimiter rateLimiter;
 
     public TrafficControlFilter(int rate) {
         super("default-traffic-control-filter");
