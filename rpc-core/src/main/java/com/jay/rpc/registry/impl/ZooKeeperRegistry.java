@@ -64,7 +64,6 @@ public class ZooKeeperRegistry extends Registry {
 
         // 生成服务器信息
         ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
-        applicationInfo.setAlive(true);
         // 序列化
         String serializedInfo = SerializationUtil.serializeJSON(applicationInfo);
         // 写入ZooKeeper
@@ -73,7 +72,7 @@ public class ZooKeeperRegistry extends Registry {
             zookeeperUtil.createPersistent(serviceRootPath, serializedInfo, ZooDefs.Ids.OPEN_ACL_UNSAFE);
         }else{
             // 更新服务信息
-            zookeeperUtil.setData(serviceRootPath, serializedInfo, 0);
+            zookeeperUtil.setData(serviceRootPath, serializedInfo);
         }
         // 创建服务地址-临时节点
         zookeeperUtil.createEphemeral(serviceAddrPath, address, ZooDefs.Ids.OPEN_ACL_UNSAFE);
@@ -84,7 +83,8 @@ public class ZooKeeperRegistry extends Registry {
         ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
         String serialized = SerializationUtil.serializeJSON(applicationInfo);
         try {
-            zookeeperUtil.setData(PATH_PREFIX + "/" + applicationName, serialized, 0);
+            zookeeperUtil.setData(PATH_PREFIX + "/" + applicationName, serialized);
+            logger.info("心跳，更新服务状态成功");
         } catch (Exception e) {
             logger.error("心跳出现异常", e);
             throw new RuntimeException("心跳异常");

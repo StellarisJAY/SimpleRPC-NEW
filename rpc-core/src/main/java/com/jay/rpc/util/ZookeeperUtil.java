@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.locks.LockSupport;
 
 /**
  * <p>
@@ -27,6 +28,9 @@ public class ZookeeperUtil {
     private ZooKeeper zooKeeper;
     private String zkHosts;
     private int sessionTimeout;
+
+    private static final int DEFAULT_RETRY_TIME = 3;
+    private static final int RETRY_WAIT_TIME = 300;
     private Logger LOGGER = LoggerFactory.getLogger(ZookeeperUtil.class);
 
 
@@ -122,7 +126,24 @@ public class ZookeeperUtil {
         return new String(data, StandardCharsets.UTF_8);
     }
 
-    public void setData(String path, String data, int version) throws KeeperException, InterruptedException {
-        zooKeeper.setData(path, data.getBytes(), version);
+    public void setData(String path, String data) {
+        Stat stat = new Stat();
+        // Zookeeper的node有版本号，所以需要用CAS来修改数据
+        int retry = 0;
+        while(retry < DEFAULT_RETRY_TIME){
+            try{
+                // 获取当前版本
+                byte[] oldData = zooKeeper.getData(path, false, stat);
+                // CAS修改
+                zooKeeper.setData(path, data.getBytes(), stat.getVersion());
+                return;
+            }catch (KeeperException e){
+                // 版本无效，重试
+                retry ++;
+            }catch (InterruptedException | IllegalArgumentException e){
+                // 服务器异常或参数异常
+                throw new RuntimeException(e);
+            }
+        }
     }
 }
