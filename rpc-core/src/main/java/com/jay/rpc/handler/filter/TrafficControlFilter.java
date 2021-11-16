@@ -1,12 +1,10 @@
 package com.jay.rpc.handler.filter;
 
-import com.google.common.util.concurrent.RateLimiter;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.handler.Filter;
 import com.jay.rpc.handler.filter.exception.FilteredException;
+import com.jay.rpc.util.RateLimiter;
 import io.netty.channel.ChannelHandlerContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * <p>

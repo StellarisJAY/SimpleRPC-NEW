@@ -187,4 +187,35 @@ public class RateLimiter {
     private boolean compareAndSwap(int value, int expect){
         return unsafe.compareAndSwapInt(this, tokenFiledOffset, expect, value);
     }
+
+    /**
+     * 该方法将重置令牌桶的每秒允许令牌数
+     * @param permitsPerSecond qps
+     */
+    public void setRate(int permitsPerSecond){
+        if(permitsPerSecond <= 0){
+            throw new IllegalArgumentException("permits per second must be positive");
+        }
+        synchronized (mutex){
+            /*
+                重置后，将当前桶内令牌设为0，使所有的线程暂时无法获得。
+                之后在稳定的速率下逐渐填充。
+                正在CAS的线程也会因为tokens和expect不同而重新尝试
+             */
+            this.tokens = 0;
+            this.maxPermits = permitsPerSecond;
+            // 设置上次提供时间为当前时间
+            this.lastSupplyTime = (long)Math.ceil(System.nanoTime() / 1e3);
+            // 转换时间单位为微秒
+            double permitsPerUnit = permitsPerSecond / 1e6;
+            // 重新计算稳定的时间间隔和速率
+            int interval = 1;
+            while(permitsPerUnit < 1){
+                permitsPerUnit *= 10;
+                interval *= 10;
+            }
+            this.stableInterval = interval;
+            this.rate = (int)permitsPerUnit;
+        }
+    }
 }
