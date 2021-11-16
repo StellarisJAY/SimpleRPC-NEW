@@ -2,6 +2,7 @@ package com.jay.rpc.registry.impl;
 
 import com.jay.rpc.registry.ApplicationInfo;
 import com.jay.rpc.registry.Registry;
+import com.jay.rpc.util.RedisLock;
 import com.jay.rpc.util.RedisUtil;
 import com.jay.rpc.util.SerializationUtil;
 import org.slf4j.Logger;
@@ -10,6 +11,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -26,9 +28,20 @@ import java.util.stream.Collectors;
 public class RedisRegistry extends Registry {
 
     private final RedisUtil redisUtil;
+    /**
+     * 服务信息 key 前缀
+     */
     private final String KEY_SERVICE_PREFIX = "rpc.service.";
+    /**
+     * 服务地址 key 前缀
+     */
     private final String KEY_ADDRESS_PREFIX = "rpc.address.";
     private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
+
+    /**
+     * 该服务器的分布式锁UUID
+     */
+    private static final String LOCK_UUID = UUID.randomUUID().toString();
 
     public RedisRegistry(RedisUtil redisUtil) {
         this.redisUtil = redisUtil;
@@ -44,32 +57,34 @@ public class RedisRegistry extends Registry {
     public List<ApplicationInfo> discoverService() {
         // 获取所有的服务key
         Set<String> keys = redisUtil.keys(KEY_SERVICE_PREFIX + "*");
-        List<ApplicationInfo> applicationInfos = keys.stream().map(key -> {
+
+        return keys.stream().map(key -> {
             String serializedInfo = redisUtil.get(key);
             LOGGER.info("JSON信息：{}", serializedInfo);
             ApplicationInfo info = SerializationUtil.deserializeJSON(serializedInfo, ApplicationInfo.class);
 
+            // 获取服务地址，获取到null表示服务已下线
             String addrKey = KEY_ADDRESS_PREFIX + info.getApplicationName();
             String addr = redisUtil.get(addrKey);
-            if(addr != null){
-                info.setAddress(addr);
-            }
+            info.setAddress(addr);
+            // 设置服务状态
             info.setAlive(addr != null);
             return info;
         }).collect(Collectors.toList());
-
-        return applicationInfos;
     }
 
     @Override
     public void registerService(String applicationName, String address) throws Exception {
         String rootKey = KEY_SERVICE_PREFIX + applicationName;
         String addressKey = KEY_ADDRESS_PREFIX + applicationName;
+        String lockKey = addressKey + ".lock";
 
         /*
             Redis 每条指令是原子的，但是多条指令不是
             多线程下可能导致多个服务注册到一个名字下
          */
+        RedisLock.lock(lockKey, LOCK_UUID);
+
         String addrValue = redisUtil.get(addressKey);
         if(!StringUtils.isEmpty(addrValue) && !addrValue.equals(address)){
             throw new RuntimeException("服务名已被注册");
@@ -82,6 +97,9 @@ public class RedisRegistry extends Registry {
         redisUtil.set(rootKey, serializedInfo);
         // 注册服务
         redisUtil.setEx(addressKey, address, heartBeatTime, TimeUnit.SECONDS);
+
+        // 解锁
+        RedisLock.unlock(lockKey, LOCK_UUID);
     }
 
     @Override
