@@ -1,9 +1,7 @@
 package com.jay.rpc.client;
 
-import com.jay.rpc.registry.Registry;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
-import io.netty.util.internal.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -11,7 +9,8 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.lang.reflect.Proxy;
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * <p>
@@ -25,13 +24,13 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class RpcProxy {
 
-    @Resource
-    private Registry serviceRegistry;
-
     /**
      * 代理对象池，避免重复创建同一个接口的代理对象
      */
-    private HashMap<Class<?>, Object> proxyInstances = new HashMap<>(256);
+    private final HashMap<Class<?>, Object> proxyInstances = new HashMap<>(256);
+
+    @Resource
+    private RpcClient rpcClient;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcProxy.class);
     @SuppressWarnings("unchecked")
@@ -51,35 +50,21 @@ public class RpcProxy {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T createInstance(Class<T> clazz, String serviceName){
+    private <T> T createInstance(Class<T> clazz, String applicationName){
         /*
             动态代理
             对调用的方法生成代理，代理方法中通过发送RPC请求来获取返回值
          */
         Object proxyInstance = Proxy.newProxyInstance(clazz.getClassLoader(), new Class[]{clazz}, (proxy, method, args) -> {
-            // 从注册中心获取地址
-            String address = serviceRegistry.getServiceAddress(serviceName);
-            if(StringUtil.isNullOrEmpty(address)){
-                throw new RuntimeException("无法找到服务实现");
-            }
-            // 切分出端口
-            int split = address.indexOf(":");
-            int port = Integer.parseInt(address.substring(split + 1));
-            // 创建RPC客户端
-            RpcClient client = new RpcClient(address.substring(0, split), port);
-            // 创建RPC请求
-            RpcRequest request = new RpcRequest();
-            // 服务接口
-            request.setTargetClass(clazz);
-            // 方法信息
-            request.setMethodName(method.getName());
-            request.setParameterTypes(method.getParameterTypes());
-            request.setParameters(args);
-            LOGGER.info("发送RPC请求中，请求报文：{}", request);
-            // 发送RPC请求，并同步等待response
-            RpcResponse response = client.send(request);
-            LOGGER.info("接收到RPC回复，返回：{}", response);
-            // response中包含异常，将异常抛出
+            RpcRequest request = RpcRequest.builder()
+                    .methodName(method.getName())
+                    .parameters(args)
+                    .targetClass(clazz)
+                    .parameterTypes(method.getParameterTypes())
+                    .requestId(UUID.randomUUID().toString())
+                    .build();
+            CompletableFuture<RpcResponse> future = rpcClient.send(request, applicationName);
+            RpcResponse response = future.get();
             if(response.getError() != null){
                 throw response.getError();
             }

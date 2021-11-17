@@ -1,6 +1,8 @@
 package com.jay.rpc.entity;
 
 
+import lombok.*;
+
 /**
  * <p>
  *  RPC请求
@@ -9,48 +11,15 @@ package com.jay.rpc.entity;
  * @author Jay
  * @date 2021/10/13
  **/
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Getter
+@Setter
 public class RpcRequest {
-    /**
-     * 服务接口
-     */
+    private String requestId;
     private Class<?> targetClass;
-
-    /**
-     * 方法信息
-     */
     private String methodName;
     private Class<?>[] parameterTypes;
     private Object[] parameters;
-
-    public Class<?> getTargetClass() {
-        return targetClass;
-    }
-
-    public String getMethodName() {
-        return methodName;
-    }
-
-    public Class<?>[] getParameterTypes() {
-        return parameterTypes;
-    }
-
-    public Object[] getParameters() {
-        return parameters;
-    }
-
-    public void setTargetClass(Class<?> targetClass) {
-        this.targetClass = targetClass;
-    }
-
-    public void setMethodName(String methodName) {
-        this.methodName = methodName;
-    }
-
-    public void setParameterTypes(Class<?>[] parameterTypes) {
-        this.parameterTypes = parameterTypes;
-    }
-
-    public void setParameters(Object[] parameters) {
-        this.parameters = parameters;
-    }
 }

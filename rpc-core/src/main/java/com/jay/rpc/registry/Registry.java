@@ -3,6 +3,7 @@ package com.jay.rpc.registry;
 import com.jay.rpc.discovery.ServiceMapper;
 import com.jay.rpc.entity.ApplicationInfo;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -21,7 +22,7 @@ public abstract class Registry {
      * @param serviceName 服务名称
      * @return String
      */
-    public abstract String getServiceAddress(String serviceName);
+    public abstract InetSocketAddress getServiceAddress(String serviceName);
 
     /**
      * 服务发现
@@ -53,7 +54,7 @@ public abstract class Registry {
      */
     public void startHearBeat(String applicationName, String address){
         // 延迟一个周期开启
-        executor.scheduleAtFixedRate(()->{heartBeat(applicationName, address);}, heartBeatTime, heartBeatTime, TimeUnit.SECONDS);
+        executor.scheduleAtFixedRate(()->heartBeat(applicationName, address), heartBeatTime, heartBeatTime, TimeUnit.SECONDS);
     }
 
     public ApplicationInfo getApplicationInfo(String applicationName, String address){
