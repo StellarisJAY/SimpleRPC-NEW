@@ -36,8 +36,13 @@ public class UnfinishedRequestHolder {
      * @param requestId requestId
      * @param response response
      */
-    public void complete(String requestId, RpcResponse response){
-        CompletableFuture<RpcResponse> future = futureMap.remove(requestId);
+    public void complete(RpcResponse response){
+        assert response.getRequestId() == null;
+        CompletableFuture<RpcResponse> future = futureMap.remove(response.getRequestId());
         future.complete(response);
+    }
+
+    public void remove(String requestId){
+        futureMap.remove(requestId);
     }
 }

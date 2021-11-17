@@ -25,7 +25,6 @@ public class ClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcResponse rpcResponse) throws Exception {
-        String requestId = rpcResponse.getRequestId();
-        unfinishedRequestHolder.complete(requestId, rpcResponse);
+        unfinishedRequestHolder.complete(rpcResponse);
     }
 }

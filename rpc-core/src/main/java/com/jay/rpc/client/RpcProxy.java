@@ -2,6 +2,7 @@ package com.jay.rpc.client;
 
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -11,6 +12,8 @@ import java.lang.reflect.Proxy;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * <p>
@@ -22,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
  * @date 2021/10/13
  **/
 @Component
+@Slf4j
 public class RpcProxy {
 
     /**
@@ -31,8 +35,10 @@ public class RpcProxy {
 
     @Resource
     private RpcClient rpcClient;
+    @Resource
+    private UnfinishedRequestHolder unfinishedRequestHolder;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RpcProxy.class);
+    private static final long DEFAULT_TIMEOUT = 10;
     @SuppressWarnings("unchecked")
     public <T> T create(Class<T> clazz, String serviceName){
         /*
@@ -48,9 +54,8 @@ public class RpcProxy {
         }
         return (T)proxyInstances.get(clazz);
     }
-
     @SuppressWarnings("unchecked")
-    private <T> T createInstance(Class<T> clazz, String applicationName){
+    private <T> T createInstance(Class<T> clazz, String applicationName, long timeout, TimeUnit timeUnit){
         /*
             动态代理
             对调用的方法生成代理，代理方法中通过发送RPC请求来获取返回值
@@ -64,13 +69,31 @@ public class RpcProxy {
                     .requestId(UUID.randomUUID().toString())
                     .build();
             CompletableFuture<RpcResponse> future = rpcClient.send(request, applicationName);
-            RpcResponse response = future.get();
-            if(response.getError() != null){
-                throw response.getError();
+            try{
+                // 等待response，默认超时时间10s
+                RpcResponse response = future.get(timeout == 0 ? DEFAULT_TIMEOUT : timeout, timeUnit == null ? TimeUnit.SECONDS : timeUnit);
+                if(response.getError() != null){
+                    throw response.getError();
+                }
+                return response.getResult();
+            }catch (TimeoutException e){
+                // 超时，删除未完成请求缓存
+                unfinishedRequestHolder.remove(request.getRequestId());
+                throw new TimeoutException("request timeout");
             }
-            return response.getResult();
         });
         // 返回接口类型的RPC实例
         return (T)proxyInstance;
+    }
+
+    /**
+     * 无超时时间参数
+     * @param clazz clazz
+     * @param applicationName applicationName
+     * @param <T> type
+     * @return proxyInstance
+     */
+    private <T> T createInstance(Class<T> clazz, String applicationName){
+        return createInstance(clazz, applicationName, 0, null);
     }
 }
