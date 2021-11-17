@@ -1,6 +1,6 @@
 package com.jay.rpc.registry.impl;
 
-import com.jay.rpc.registry.ApplicationInfo;
+import com.jay.rpc.entity.ApplicationInfo;
 import com.jay.rpc.registry.Registry;
 import com.jay.rpc.util.RedisUtil;
 import com.jay.rpc.util.SerializationUtil;

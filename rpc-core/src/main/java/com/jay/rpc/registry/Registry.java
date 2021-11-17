@@ -1,6 +1,7 @@
 package com.jay.rpc.registry;
 
 import com.jay.rpc.discovery.ServiceMapper;
+import com.jay.rpc.entity.ApplicationInfo;
 
 import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;

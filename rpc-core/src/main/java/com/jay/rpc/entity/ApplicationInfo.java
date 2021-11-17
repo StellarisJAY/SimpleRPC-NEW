@@ -1,4 +1,4 @@
-package com.jay.rpc.registry;
+package com.jay.rpc.entity;
 
 import java.util.Set;
 
