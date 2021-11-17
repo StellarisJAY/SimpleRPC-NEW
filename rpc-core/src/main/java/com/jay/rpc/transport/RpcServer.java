@@ -1,9 +1,9 @@
-package com.jay.rpc;
+package com.jay.rpc.transport;
 
 import com.jay.rpc.annotation.RpcService;
 import com.jay.rpc.discovery.ServiceMapper;
-import com.jay.rpc.handler.*;
-import com.jay.rpc.handler.filter.TrafficControlFilter;
+import com.jay.rpc.transport.handler.*;
+import com.jay.rpc.transport.handler.filter.TrafficControlFilter;
 import com.jay.rpc.registry.Registry;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -19,15 +19,14 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.net.InetAddress;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -37,9 +36,10 @@ import java.util.stream.Collectors;
  * @author Jay
  * @date 2021/10/13
  **/
+@Component
 public class RpcServer implements ApplicationContextAware {
-    private final NioEventLoopGroup bossGroup = new NioEventLoopGroup(1);
-    private final NioEventLoopGroup workerGroup = new NioEventLoopGroup();
+    private final NioEventLoopGroup bossGroup = new NioEventLoopGroup();
+    private final NioEventLoopGroup workerGroup = new NioEventLoopGroup(4);
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     @Value("${rpc.service.port:9000}")
@@ -48,13 +48,16 @@ public class RpcServer implements ApplicationContextAware {
     @Value("${spring.application.name}")
     private String applicationName;
 
-    @Value("${rpc.traffic.enable-control:true")
+    @Value("${rpc.traffic.enable-control:true}")
     private boolean enableTrafficControl;
     @Value("${rpc.traffic.permits-per-second:1000}")
     private int permitsPerSecond;
 
     private ApplicationContext context;
 
+    /**
+     * 用户自定义过滤器集合
+     */
     private Set<Filter> filters;
     @Resource
     private Registry serviceRegistry;
@@ -68,7 +71,7 @@ public class RpcServer implements ApplicationContextAware {
         serverBootstrap.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
                 .option(ChannelOption.SO_BACKLOG, 128)
-                .childOption(ChannelOption.SO_KEEPALIVE, true)
+                .childOption(ChannelOption.SO_KEEPALIVE, false)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel channel){
@@ -106,7 +109,7 @@ public class RpcServer implements ApplicationContextAware {
 
         try {
             logger.info("RPC服务启动中...");
-            // 获取服务地址
+            // 服务地址
             InetAddress localHost = InetAddress.getLocalHost();
             String host = localHost.getHostAddress() + ":" + port;
             // 注册到服务注册中心
@@ -168,9 +171,5 @@ public class RpcServer implements ApplicationContextAware {
             return entries.size();
         }
         return 0;
-    }
-
-    public void setPort(String port) {
-        this.port = port;
     }
 }

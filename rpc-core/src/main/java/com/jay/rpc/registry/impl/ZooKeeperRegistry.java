@@ -1,6 +1,6 @@
 package com.jay.rpc.registry.impl;
 
-import com.jay.rpc.registry.ApplicationInfo;
+import com.jay.rpc.entity.ApplicationInfo;
 import com.jay.rpc.registry.Registry;
 import com.jay.rpc.util.SerializationUtil;
 import com.jay.rpc.util.ZookeeperUtil;
@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
+import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +31,7 @@ public class ZooKeeperRegistry extends Registry {
      * ZooKeeper工具
      * 包括ZooKeeper连接，以及各种操作的封装
      */
+    @Resource
     private ZookeeperUtil zookeeperUtil;
 
 

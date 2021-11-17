@@ -1,4 +1,4 @@
-package com.jay.rpc.handler;
+package com.jay.rpc.transport.handler;
 
 import com.jay.rpc.entity.RpcHeader;
 import com.jay.rpc.entity.RpcRequest;
@@ -22,6 +22,7 @@ public class RpcDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) throws Exception {
+        long start = System.currentTimeMillis();
         // 报文大小是否有16字节
         if(byteBuf.readableBytes() < RpcHeader.HEADER_SIZE){
             return ;

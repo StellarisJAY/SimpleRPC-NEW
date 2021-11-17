@@ -1,6 +1,7 @@
-package com.jay.rpc.annotation;
+package com.jay.rpc.annotation.registry;
 
-import com.jay.rpc.config.CustomScannerRegistry;
+import com.jay.rpc.registry.impl.RedisRegistry;
+import com.jay.rpc.util.RedisUtil;
 import org.springframework.context.annotation.Import;
 
 import java.lang.annotation.ElementType;
@@ -9,13 +10,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * RPC启动注解
- * basePackage来指定RPC服务提供类的包
+ * 使用该注解来开启Redis注册中心
  * @author Jay
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Import({CustomScannerRegistry.class})
-public @interface EnableRpc {
-    String basePackage() default "";
+@Import({RedisUtil.class, RedisRegistry.class})
+public @interface EnableRedisRegistry {
 }

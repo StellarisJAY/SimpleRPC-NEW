@@ -12,19 +12,14 @@
 
 
 
-## 项目目标
-- [x] 完成Spring整合   
-- [ ] 完善协议格式
-- [ ] 完善序列化过程
-- [x] 整合Zookeeper作为服务注册中心 
-- [x] Zookeeper做服务发现 
-- [x] 服务注册中心抽象，通过配置切换注册中心  
-- [x] 整合 Redis 作为服务注册中心 
-- [x] 服务心跳，用于续约服务和状态检测 
+## 框架特点
+- [x] Spring整合
+- [x] 多种服务注册中心支持（ZooKeeper、Redis）
 - [x] 用户自定义过滤器
-- [ ] 权限验证
-- [x] 服务端流量控制（com/jay/rpc/util/RateLimiter）
-- [ ] 管理中心（服务管理、流量监控、执行日志、限流）
+- [x] 服务端限流器
+- [ ] TCP连接池
+- [ ] 服务集群注册与负载均衡
+- [ ] 管理控制页面
 
 ## 使用说明   
 
@@ -45,23 +40,18 @@
 ```properties
 # RPC服务器地址
 rpc.service.port=8000
-
-# 配置注册中心类型，现支持ZooKeeper和Redis
-rpc.service.registry.type=zookeeper
-
-# Zookeeper地址
-rpc.service.registry.zk.hosts=192.168.154.128:2181
-
-# Zookeeper Session 断开超时时间
-rpc.service.registtry.zk.session-timeout=5000
 # 服务名称（必要）
 spring.application.name=rpcService
 ```
 
-#### 添加@EnableRpc注解
+#### 添加@EnableRpc注解和@EnbaleXXXRegistry注解
+
+- @EnableRpc注解中通过basePackage指定服务提供类的路径。
+- 使用@EnableXXXRegistry来指定注册中心类型，比如ZooKeeper、Redis
 
 ```java
-@EnableRpc
+@EnableRpc(basePackage="com.jay.sample")
+@EnableZooKeeperRegistry
 @SpringBootApplication
 public class TestApplication{
     public static void main(String[] args){
@@ -83,7 +73,7 @@ public class HelloServiceImpl implements HelloService{
 
 ### 服务调用方（客户端）
 
-同服务端，添加Maven、添加配置、添加**@EnableRpc**注解。
+同服务端，添加Maven、添加配置、添加**@EnableRpc**和**@EnableXXXRegistry**注解。
 
 #### 远程调用
 
@@ -108,13 +98,28 @@ public class HelloController {
 
 调用代理对象的方法将会从**服务注册中心**找到服务提供方的地址，然后发送RPC请求获取执行结果。
 
-### 使用 Redis 作为服务注册中心
 
-在配置文件添加以下内容：
+
+### 使用ZooKeeper作为注册中心
+
+1. 启动类使用**@EnableZooKeeperRegistry**注解
+2. 在配置文件添加以下内容：
 
 ```properties
-# 配置注册中心类型
-rpc.service.registry.type=redis
+# zookeeper地址
+rpc.service.registry.zk.hosts=192.168.154.128:2181
+# session超时时长
+rpc.service.registry.zk.session-timeout=4000
+```
+
+
+
+### 使用 Redis 作为注册中心
+
+1. 启动类使用**@EnableRedisRegistry**注解
+2. 在配置文件添加以下内容：
+
+```properties
 # redis 地址
 rpc.service.registry.redis.host=localhost
 rpc.service.registry.redis.port=6379

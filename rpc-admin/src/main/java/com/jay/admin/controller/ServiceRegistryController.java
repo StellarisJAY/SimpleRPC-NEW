@@ -1,6 +1,6 @@
 package com.jay.admin.controller;
 
-import com.jay.rpc.registry.ApplicationInfo;
+import com.jay.rpc.entity.ApplicationInfo;
 import com.jay.rpc.registry.Registry;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * <p>
- *
+ *  服务中心api
  * </p>
  *
  * @author Jay
