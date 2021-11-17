@@ -1,9 +1,8 @@
 package com.jay.rpc.client;
 
-import com.jay.rpc.registry.Registry;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
-import io.netty.util.internal.StringUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -11,7 +10,10 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.lang.reflect.Proxy;
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * <p>
@@ -23,17 +25,20 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date 2021/10/13
  **/
 @Component
+@Slf4j
 public class RpcProxy {
-
-    @Resource
-    private Registry serviceRegistry;
 
     /**
      * 代理对象池，避免重复创建同一个接口的代理对象
      */
-    private HashMap<Class<?>, Object> proxyInstances = new HashMap<>(256);
+    private final HashMap<Class<?>, Object> proxyInstances = new HashMap<>(256);
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RpcProxy.class);
+    @Resource
+    private RpcClient rpcClient;
+    @Resource
+    private UnfinishedRequestHolder unfinishedRequestHolder;
+
+    private static final long DEFAULT_TIMEOUT = 10;
     @SuppressWarnings("unchecked")
     public <T> T create(Class<T> clazz, String serviceName){
         /*
@@ -49,43 +54,46 @@ public class RpcProxy {
         }
         return (T)proxyInstances.get(clazz);
     }
-
     @SuppressWarnings("unchecked")
-    private <T> T createInstance(Class<T> clazz, String serviceName){
+    private <T> T createInstance(Class<T> clazz, String applicationName, long timeout, TimeUnit timeUnit){
         /*
             动态代理
             对调用的方法生成代理，代理方法中通过发送RPC请求来获取返回值
          */
         Object proxyInstance = Proxy.newProxyInstance(clazz.getClassLoader(), new Class[]{clazz}, (proxy, method, args) -> {
-            // 从注册中心获取地址
-            String address = serviceRegistry.getServiceAddress(serviceName);
-            if(StringUtil.isNullOrEmpty(address)){
-                throw new RuntimeException("无法找到服务实现");
+            RpcRequest request = RpcRequest.builder()
+                    .methodName(method.getName())
+                    .parameters(args)
+                    .targetClass(clazz)
+                    .parameterTypes(method.getParameterTypes())
+                    .requestId(UUID.randomUUID().toString())
+                    .build();
+            CompletableFuture<RpcResponse> future = rpcClient.send(request, applicationName);
+            try{
+                // 等待response，默认超时时间10s
+                RpcResponse response = future.get(timeout == 0 ? DEFAULT_TIMEOUT : timeout, timeUnit == null ? TimeUnit.SECONDS : timeUnit);
+                if(response.getError() != null){
+                    throw response.getError();
+                }
+                return response.getResult();
+            }catch (TimeoutException e){
+                // 超时，删除未完成请求缓存
+                unfinishedRequestHolder.remove(request.getRequestId());
+                throw new TimeoutException("request timeout");
             }
-            // 切分出端口
-            int split = address.indexOf(":");
-            int port = Integer.parseInt(address.substring(split + 1));
-            // 创建RPC客户端
-            RpcClient client = new RpcClient(address.substring(0, split), port);
-            // 创建RPC请求
-            RpcRequest request = new RpcRequest();
-            // 服务接口
-            request.setTargetClass(clazz);
-            // 方法信息
-            request.setMethodName(method.getName());
-            request.setParameterTypes(method.getParameterTypes());
-            request.setParameters(args);
-            LOGGER.info("发送RPC请求中，请求报文：{}", request);
-            // 发送RPC请求，并同步等待response
-            RpcResponse response = client.send(request);
-            LOGGER.info("接收到RPC回复，返回：{}", response);
-            // response中包含异常，将异常抛出
-            if(response.getError() != null){
-                throw response.getError();
-            }
-            return response.getResult();
         });
         // 返回接口类型的RPC实例
         return (T)proxyInstance;
+    }
+
+    /**
+     * 无超时时间参数
+     * @param clazz clazz
+     * @param applicationName applicationName
+     * @param <T> type
+     * @return proxyInstance
+     */
+    private <T> T createInstance(Class<T> clazz, String applicationName){
+        return createInstance(clazz, applicationName, 0, null);
     }
 }

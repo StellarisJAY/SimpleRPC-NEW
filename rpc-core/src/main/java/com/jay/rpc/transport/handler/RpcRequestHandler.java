@@ -45,6 +45,7 @@ public class RpcRequestHandler extends SimpleChannelInboundHandler<RpcRequest> {
             Method targetMethod = targetClass.getMethod(rpcRequest.getMethodName(), rpcRequest.getParameterTypes());
             Object result = targetMethod.invoke(instance, rpcRequest.getParameters());
             response.setResult(result);
+            response.setRequestId(rpcRequest.getRequestId());
             // 方法返回类型，如果是void，将返回类型设为Object，避免序列化错误
             response.setReturnType(targetMethod.getReturnType() == Void.TYPE ? Object.class : targetMethod.getReturnType());
         }catch (Exception e){

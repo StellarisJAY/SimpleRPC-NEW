@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -49,8 +50,11 @@ public class RedisRegistry extends Registry {
 
 
     @Override
-    public String getServiceAddress(String serviceName) {
-        return redisUtil.get(KEY_ADDRESS_PREFIX + serviceName);
+    public InetSocketAddress getServiceAddress(String serviceName) {
+        String address = redisUtil.get(KEY_ADDRESS_PREFIX + serviceName);
+        String ip = address.substring(0, address.indexOf(":"));
+        int port = Integer.parseInt(address.substring(address.indexOf(":") + 1));
+        return new InetSocketAddress(ip, port);
     }
 
     @Override
@@ -83,7 +87,6 @@ public class RedisRegistry extends Registry {
             Redis 每条指令是原子的，但是多条指令不是
             多线程下可能导致多个服务注册到一个名字下
          */
-//        RedisLock.lock(lockKey, LOCK_UUID);
 
         String addrValue = redisUtil.get(addressKey);
         if(!StringUtils.isEmpty(addrValue) && !addrValue.equals(address)){
@@ -98,8 +101,6 @@ public class RedisRegistry extends Registry {
         // 注册服务
         redisUtil.setEx(addressKey, address, heartBeatTime, TimeUnit.SECONDS);
 
-        // 解锁
-//        RedisLock.unlock(lockKey, LOCK_UUID);
     }
 
     @Override

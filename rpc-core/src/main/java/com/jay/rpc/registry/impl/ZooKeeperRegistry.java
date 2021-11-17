@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -124,10 +125,13 @@ public class ZooKeeperRegistry extends Registry {
      * @return String
      */
     @Override
-    public String getServiceAddress(String serviceName){
+    public InetSocketAddress getServiceAddress(String serviceName){
         try{
             String servicePath = PATH_PREFIX + "/" + serviceName;
-            return zookeeperUtil.getData(servicePath + "/address");
+            String address = zookeeperUtil.getData(servicePath + "/address");
+            String ip = address.substring(0, address.indexOf(":"));
+            int port = Integer.parseInt(address.substring(address.indexOf(":") + 1));
+            return new InetSocketAddress(ip, port);
         }catch (Exception e){
             logger.error("获取服务地址出现异常", e);
             return null;
