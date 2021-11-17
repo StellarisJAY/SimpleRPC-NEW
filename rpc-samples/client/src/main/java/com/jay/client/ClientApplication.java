@@ -1,6 +1,7 @@
 package com.jay.client;
 
 import com.jay.rpc.annotation.EnableRpc;
+import com.jay.rpc.annotation.registry.EnableRedisRegistry;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -12,7 +13,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author Jay
  * @date 2021/11/3
  **/
-@EnableRpc
+@EnableRpc(basePackage = "com.jay.client")
+@EnableRedisRegistry
 @SpringBootApplication
 public class ClientApplication {
     public static void main(String[] args) {

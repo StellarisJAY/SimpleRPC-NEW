@@ -6,9 +6,12 @@ import com.jay.rpc.entity.RpcResponse;
 import io.netty.util.internal.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.lang.reflect.Proxy;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * <p>
@@ -19,14 +22,36 @@ import java.lang.reflect.Proxy;
  * @author Jay
  * @date 2021/10/13
  **/
+@Component
 public class RpcProxy {
 
     @Resource
     private Registry serviceRegistry;
 
+    /**
+     * 代理对象池，避免重复创建同一个接口的代理对象
+     */
+    private HashMap<Class<?>, Object> proxyInstances = new HashMap<>(256);
+
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcProxy.class);
     @SuppressWarnings("unchecked")
     public <T> T create(Class<T> clazz, String serviceName){
+        /*
+            每一个代理对象都是懒加载单例
+            使用单例是为了避免重复创建代理对象
+         */
+        if(!proxyInstances.containsKey(clazz)){
+            synchronized (clazz){
+                if(!proxyInstances.containsKey(clazz)){
+                    proxyInstances.put(clazz, createInstance(clazz, serviceName));
+                }
+            }
+        }
+        return (T)proxyInstances.get(clazz);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T createInstance(Class<T> clazz, String serviceName){
         /*
             动态代理
             对调用的方法生成代理，代理方法中通过发送RPC请求来获取返回值

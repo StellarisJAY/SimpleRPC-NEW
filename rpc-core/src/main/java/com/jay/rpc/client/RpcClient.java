@@ -21,7 +21,7 @@ import java.util.concurrent.CountDownLatch;
  * @date 2021/10/13
  **/
 public class RpcClient extends SimpleChannelInboundHandler<RpcResponse> {
-    private final NioEventLoopGroup group = new NioEventLoopGroup();
+    private final NioEventLoopGroup group = new NioEventLoopGroup(4);
     private Bootstrap bootstrap;
     private final String host;
     private final int port;
@@ -43,7 +43,7 @@ public class RpcClient extends SimpleChannelInboundHandler<RpcResponse> {
                         pipeline.addLast(RpcClient.this);
                     }
                 })
-                .option(ChannelOption.SO_KEEPALIVE, true);
+                .option(ChannelOption.SO_KEEPALIVE, false);
     }
 
     public RpcClient(String host, int port){

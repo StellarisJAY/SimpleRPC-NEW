@@ -3,6 +3,7 @@ package com.jay.rpc.util;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
+import javax.annotation.Resource;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
@@ -16,7 +17,8 @@ import java.util.concurrent.locks.LockSupport;
  * @date 2021/11/16
  **/
 public class RedisLock {
-    private static JedisPool jedisPool;
+    @Resource
+    private RedisUtil redisUtil;
 
     private static final long SINGLE_PARK_TIME = 100;
 
@@ -34,17 +36,14 @@ public class RedisLock {
                     "end; " +
                     "return 0;";
 
-    public static void setJedisPool(JedisPool pool){
-        jedisPool = pool;
-    }
-
     /**
      * 加锁，阻塞
      * @param name 锁名称
      * @param id 加锁主机id
      * @throws InterruptedException e
      */
-    public static void lock(String name, String id) throws InterruptedException {
+    public void lock(String name, String id) throws InterruptedException {
+        JedisPool jedisPool = redisUtil.getJedisPool();
         try(Jedis jedis = jedisPool.getResource()){
             while(true){
                 // set if not exists & expire
@@ -67,7 +66,8 @@ public class RedisLock {
      * @param timeUnit 时间单位
      * @return boolean
      */
-    public static boolean tryLock(String name, String id, long timeout, TimeUnit timeUnit){
+    public boolean tryLock(String name, String id, long timeout, TimeUnit timeUnit){
+        JedisPool jedisPool = redisUtil.getJedisPool();
         try(Jedis jedis = jedisPool.getResource()){
             long timeoutNanos = timeUnit.toNanos(timeout);
             // 自旋
@@ -94,7 +94,8 @@ public class RedisLock {
      * @param name name
      * @param id id
      */
-    public static void unlock(String name, String id){
+    public void unlock(String name, String id){
+        JedisPool jedisPool = redisUtil.getJedisPool();
         try(Jedis jedis = jedisPool.getResource()){
             // 执行lua脚本
             if((Long)jedis.eval(UNLOCK_SCRIPT, Collections.singletonList(name), Collections.singletonList(id)) == 0){

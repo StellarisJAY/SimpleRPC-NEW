@@ -1,7 +1,9 @@
 package com.jay.rpc.util;
 
+import org.springframework.beans.factory.annotation.Value;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -20,8 +22,13 @@ public class RedisUtil {
      */
     private JedisPool jedisPool;
 
-    public RedisUtil(JedisPool jedisPool) {
-        this.jedisPool = jedisPool;
+    public RedisUtil(@Value("${rpc.service.registry.redis.host:localhost}") String host,
+                     @Value("${rpc.service.registry.redis.port:6379}")int port,
+                     @Value("${rpc.service.registry.redis.password}")String password,
+                     @Value("${rpc.service.registry.redis.max-wait-millis:4000}")long maxWaitTime){
+        JedisPoolConfig poolConfig = new JedisPoolConfig();
+        poolConfig.setMaxWaitMillis(maxWaitTime);
+        this.jedisPool =  new JedisPool(poolConfig, host, port);
     }
 
     /**
@@ -96,5 +103,9 @@ public class RedisUtil {
         try(Jedis jedis = jedisPool.getResource()){
             return jedis.keys(pattern);
         }
+    }
+
+    protected JedisPool getJedisPool(){
+        return jedisPool;
     }
 }

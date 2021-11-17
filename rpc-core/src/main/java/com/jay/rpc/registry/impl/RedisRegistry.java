@@ -2,13 +2,13 @@ package com.jay.rpc.registry.impl;
 
 import com.jay.rpc.registry.ApplicationInfo;
 import com.jay.rpc.registry.Registry;
-import com.jay.rpc.util.RedisLock;
 import com.jay.rpc.util.RedisUtil;
 import com.jay.rpc.util.SerializationUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
+import javax.annotation.Resource;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  * @date 2021/11/3
  **/
 public class RedisRegistry extends Registry {
-
+    @Resource
     private final RedisUtil redisUtil;
     /**
      * 服务信息 key 前缀
@@ -83,7 +83,7 @@ public class RedisRegistry extends Registry {
             Redis 每条指令是原子的，但是多条指令不是
             多线程下可能导致多个服务注册到一个名字下
          */
-        RedisLock.lock(lockKey, LOCK_UUID);
+//        RedisLock.lock(lockKey, LOCK_UUID);
 
         String addrValue = redisUtil.get(addressKey);
         if(!StringUtils.isEmpty(addrValue) && !addrValue.equals(address)){
@@ -99,7 +99,7 @@ public class RedisRegistry extends Registry {
         redisUtil.setEx(addressKey, address, heartBeatTime, TimeUnit.SECONDS);
 
         // 解锁
-        RedisLock.unlock(lockKey, LOCK_UUID);
+//        RedisLock.unlock(lockKey, LOCK_UUID);
     }
 
     @Override

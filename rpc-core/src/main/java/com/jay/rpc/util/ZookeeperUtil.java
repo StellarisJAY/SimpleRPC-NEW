@@ -5,13 +5,13 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.locks.LockSupport;
 
 /**
  * <p>
@@ -25,7 +25,7 @@ public class ZookeeperUtil {
     /**
      * Zookeeper 实例
      */
-    private ZooKeeper zooKeeper;
+    private final ZooKeeper zooKeeper;
     private String zkHosts;
     private int sessionTimeout;
 
@@ -34,7 +34,8 @@ public class ZookeeperUtil {
     private Logger LOGGER = LoggerFactory.getLogger(ZookeeperUtil.class);
 
 
-    public ZookeeperUtil(String zkHosts, int sessionTimeout) throws IOException, InterruptedException {
+    public ZookeeperUtil(@Value("${rpc.service.registry.zk.hosts}") String zkHosts,
+                         @Value("${rpc.service.registry.zk.session-timeout}")int sessionTimeout) throws IOException, InterruptedException {
         this.zkHosts = zkHosts;
         this.sessionTimeout = sessionTimeout;
         this.zooKeeper =  connect();
