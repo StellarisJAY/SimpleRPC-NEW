@@ -1,5 +1,6 @@
 package com.jay.sample.server.filter;
 
+import com.jay.rpc.entity.RpcMessage;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.transport.handler.Filter;
 import com.jay.rpc.transport.handler.filter.exception.FilteredException;
@@ -28,7 +29,7 @@ public class MyFilter extends Filter {
     }
 
     @Override
-    public boolean doFilter(ChannelHandlerContext context, RpcRequest request) throws FilteredException {
+    public boolean doFilter(ChannelHandlerContext context, RpcMessage message) throws FilteredException {
         logger.info("执行过滤器：{}", filterName);
         return true;
     }

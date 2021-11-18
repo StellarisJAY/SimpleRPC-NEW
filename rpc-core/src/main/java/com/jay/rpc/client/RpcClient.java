@@ -1,5 +1,8 @@
 package com.jay.rpc.client;
 
+import com.jay.common.enums.SerializerTypeEnum;
+import com.jay.rpc.constants.RpcConstants;
+import com.jay.rpc.entity.RpcMessage;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
 import com.jay.rpc.registry.Registry;
@@ -19,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * <p>
@@ -37,6 +41,7 @@ public class RpcClient {
     private final Registry registry;
     private final UnfinishedRequestHolder unfinishedRequestHolder;
     private final ChannelProvider channelProvider;
+    private final AtomicInteger idProvider = new AtomicInteger(0);
 
     @Autowired
     public RpcClient(Registry registry, UnfinishedRequestHolder unfinishedRequestHolder, ChannelProvider channelProvider){
@@ -71,9 +76,17 @@ public class RpcClient {
         InetSocketAddress address = registry.getServiceAddress(applicationName);
         // 获取channel
         Channel channel = getChannel(address);
+        // 封装RpcMessage
+        RpcMessage message = RpcMessage.builder().data(request)
+                .messageType(RpcConstants.TYPE_REQUEST)
+                .compress((byte) 1)
+                .requestId(idProvider.getAndIncrement())
+                .serializer(SerializerTypeEnum.PROTOSTUFF.code)
+                .build();
+
         CompletableFuture<RpcResponse> result = new CompletableFuture<>();
         // 发送请求，使用listener监听发送状态
-        channel.writeAndFlush(request).addListener((ChannelFutureListener)future->{
+        channel.writeAndFlush(message).addListener((ChannelFutureListener)future->{
            if(future.isSuccess()){
                log.info("请求发送成功，requestId：{}", request.getRequestId());
                // 请求发送成功

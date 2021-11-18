@@ -1,5 +1,6 @@
 package com.jay.rpc.transport.handler;
 
+import com.jay.rpc.entity.RpcMessage;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
 import com.jay.rpc.transport.handler.filter.exception.FilteredException;
@@ -17,7 +18,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
  * @date 2021/11/8
  **/
 @ChannelHandler.Sharable
-public abstract class Filter extends SimpleChannelInboundHandler<RpcRequest> {
+public abstract class Filter extends SimpleChannelInboundHandler<RpcMessage> {
 
     protected String filterName;
 
@@ -26,10 +27,10 @@ public abstract class Filter extends SimpleChannelInboundHandler<RpcRequest> {
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcRequest request) throws Exception {
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcMessage message) throws Exception {
         try{
-            if(doFilter(channelHandlerContext, request)){
-                channelHandlerContext.fireChannelRead(request);
+            if(doFilter(channelHandlerContext, message)){
+                channelHandlerContext.fireChannelRead(message);
             }
             else{
                 RpcResponse response = new RpcResponse();
@@ -46,9 +47,9 @@ public abstract class Filter extends SimpleChannelInboundHandler<RpcRequest> {
     /**
      * 过滤器方法
      * @param context 上下文
-     * @param request RPC请求
+     * @param message RPC报文
      * @return boolean 是否放行
      * @throws FilteredException 过滤器抛出异常
      */
-    public abstract boolean doFilter(ChannelHandlerContext context, RpcRequest request) throws FilteredException;
+    public abstract boolean doFilter(ChannelHandlerContext context, RpcMessage message) throws FilteredException;
 }
