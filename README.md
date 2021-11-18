@@ -17,6 +17,7 @@
 - [x] 多种服务注册中心支持（ZooKeeper、Redis）
 - [x] 用户自定义过滤器
 - [x] 服务端限流器
+- [x] 报文压缩
 - [ ] TCP连接池
 - [ ] 服务集群注册与负载均衡
 - [ ] 管理控制页面
@@ -179,6 +180,48 @@ rpc.traffic.permits-per-second=100
 6. 到达RpcRequestHandler，通过反射找到目标方法并调用。
 7. 生成RpcResponse，通过RpcEncoder序列化后发送给客户端。
 8. 客户端收到，代理对象根据RpcResponse输出结果。
+
+### 协议格式
+
+![RPC-message](https://images-1257369645.cos.ap-chengdu.myqcloud.com/notes/RPC-message.png)
+
+- 头部大小共16字节。
+- 魔数（magic number）：4字节，用于识别报文。
+- 版本（version）：1字节，用于检查版本。
+- 总长度（length）：4字节，表示整个报文的长度，即头部16字节 + 数据部分长度
+- 类型（type）：1字节，区分报文类型，请求/返回/心跳。
+- 序列化方式（serializer）：1字节，数据部分序列化方式，比如Protostuff、Kyro。
+- 压缩方式（compress）：1字节，数据部分的压缩方式，比如GZIP。如果为0，表示数据部分未压缩。
+- 请求ID（request ID）：4字节，用于区分报文，有IDProvider提供的自增数值。
+- 数据部分（Data）：实际的请求或返回，序列化并压缩后的数据。
+
+### TCP粘包和拆包的解决
+
+TCP粘包和拆包都是由TCP协议的Nagles算法导致的，该算法要求TCP每次在缓存装满后发送整个缓存的数据，这就会导致多个应用层的小数据包粘连，或者大数据包被拆分。
+
+Netty提供了叫LengthFieldBasedFrameDecoder来解决粘包拆包。通过在报文中添加长度字段，以及该Decoder的几个重要参数，就能够区分出粘连或拆分的报文。
+
+```java
+public class RpcDecoder extends LengthFieldBasedFrameDecoder {
+
+    public RpcDecoder() {
+        // 注意这里的参数值，都是根据各参数的意义和协议头部格式计算出来的
+        this(RpcConstants.MAX_MESSAGE_LENGTH, 5, 4, -9, 0);
+    }
+	
+    public RpcDecoder(int maxFrameLength, int lengthFieldOffset, int lengthFieldLength, int lengthAdjustment, int initialBytesToStrip) {
+        super(maxFrameLength, lengthFieldOffset, lengthFieldLength, lengthAdjustment, initialBytesToStrip);
+
+    }
+```
+
+需要配置的参数有以下几个：
+
+- **maxFrameLength**：数据帧最大长度，即一个应用层数据包最大的长度。
+- **lengthFieldOffset**：长度字段偏移，即长度字段在ByteBuf中的起始位置，比如当前协议的起始位置是 5。暂时称该位置为A。
+- **lengthFieldLength**：长度字段长度，即长度字段有多少个字节，比如当前协议是 4字节。暂时称它表示的数值为 d，位置B = A + 字段长度。
+- **lengthAdjustment**：用来调整传递到下一层处理器的末尾指针位置。该位置为，D = （B + d - lengthAdjustment）。在当前协议下，B+d明显超出了可读范围，超出的值是魔数+版本+长度。
+- **initialBytesToStrip**：用来调整传到下一层处理器的起始指针。比如下一层想跳过魔数，那么该参数就是 4。
 
 ### 过滤器原理
 
