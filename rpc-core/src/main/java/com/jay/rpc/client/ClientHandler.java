@@ -1,8 +1,11 @@
 package com.jay.rpc.client;
 
+import com.jay.rpc.constants.RpcConstants;
+import com.jay.rpc.entity.RpcMessage;
 import com.jay.rpc.entity.RpcResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * <p>
@@ -12,7 +15,8 @@ import io.netty.channel.SimpleChannelInboundHandler;
  * @author Jay
  * @date 2021/11/17
  **/
-public class ClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
+@Slf4j
+public class ClientHandler extends SimpleChannelInboundHandler<RpcMessage> {
 
     /**
      * 未完成请求缓存
@@ -24,7 +28,11 @@ public class ClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcResponse rpcResponse) throws Exception {
-        unfinishedRequestHolder.complete(rpcResponse);
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcMessage message) throws Exception {
+        if(message.getMessageType() == RpcConstants.TYPE_RESPONSE){
+            RpcResponse response = (RpcResponse)message.getData();
+            log.info("收到response：id={}", response.getRequestId());
+            unfinishedRequestHolder.complete(response);
+        }
     }
 }

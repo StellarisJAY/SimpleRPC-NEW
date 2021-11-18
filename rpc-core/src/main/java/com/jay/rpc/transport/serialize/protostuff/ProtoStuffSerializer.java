@@ -1,14 +1,16 @@
-package com.jay.rpc.util;
+package com.jay.rpc.transport.serialize.protostuff;
 
 import com.alibaba.fastjson.JSON;
+import com.jay.rpc.transport.serialize.Serializer;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffIOUtil;
 import io.protostuff.Schema;
 import io.protostuff.runtime.RuntimeSchema;
-import org.springframework.boot.jackson.JsonObjectSerializer;
+import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.spi.LocaleServiceProvider;
 
 /**
  * <p>
@@ -18,12 +20,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Jay
  * @date 2021/10/13
  **/
-public class SerializationUtil {
+public class ProtoStuffSerializer implements Serializer {
 
     private static Map<Class<?>, Schema<?>> schemaMap = new ConcurrentHashMap<>();
 
     @SuppressWarnings("unchecked")
-    public static <T> byte[] serialize(T object){
+    @Override
+    public <T> byte[] serialize(T object){
         Class<T> clazz = (Class<T>)object.getClass();
         Schema<T> schema = getSchema(clazz);
         LinkedBuffer buffer = LinkedBuffer.allocate(LinkedBuffer.DEFAULT_BUFFER_SIZE);
@@ -34,7 +37,8 @@ public class SerializationUtil {
         }
     }
 
-    public static <T> T deserialize(byte[] bytes, Class<T> clazz){
+    @Override
+    public <T> T deserialize(byte[] bytes, Class<T> clazz){
         Schema<T> schema = getSchema(clazz);
         T result = schema.newMessage();
         ProtostuffIOUtil.mergeFrom(bytes, result ,schema);

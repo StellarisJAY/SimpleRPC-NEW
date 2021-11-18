@@ -1,6 +1,8 @@
 package com.jay.rpc.transport.handler.filter;
 
 import com.google.common.util.concurrent.RateLimiter;
+import com.jay.rpc.constants.RpcConstants;
+import com.jay.rpc.entity.RpcMessage;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.transport.handler.Filter;
 import com.jay.rpc.transport.handler.filter.exception.FilteredException;
@@ -40,7 +42,11 @@ public class TrafficControlFilter extends Filter {
     }
 
     @Override
-    public boolean doFilter(ChannelHandlerContext context, RpcRequest request) throws FilteredException {
+    public boolean doFilter(ChannelHandlerContext context, RpcMessage message) throws FilteredException {
+        // 对心跳请求放行
+        if(message.getMessageType() == RpcConstants.TYPE_HEARTBEAT_REQUEST) {
+            return true;
+        }
         if(!rateLimiter.tryAcquire()){
             throw new FilteredException("Blocked by Traffic Control");
         }
