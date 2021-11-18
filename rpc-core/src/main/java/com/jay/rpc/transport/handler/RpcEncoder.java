@@ -1,7 +1,9 @@
 package com.jay.rpc.transport.handler;
 
+import com.jay.common.enums.CompressorTypeEnum;
 import com.jay.common.enums.SerializerTypeEnum;
 import com.jay.common.extention.ExtensionLoader;
+import com.jay.rpc.compress.Compressor;
 import com.jay.rpc.constants.RpcConstants;
 import com.jay.rpc.entity.RpcMessage;
 import com.jay.rpc.transport.serialize.Serializer;
@@ -53,17 +55,32 @@ public class RpcEncoder extends MessageToByteEncoder<RpcMessage> {
             out.writeInt(rpcMessage.getRequestId());
 
             int fullLength = RpcConstants.HEAD_LENGTH;
+            byte[] bytes = null;
             // 消息类型是请求或返回
             if(rpcMessage.getMessageType() == RpcConstants.TYPE_RESPONSE || rpcMessage.getMessageType() == RpcConstants.TYPE_REQUEST){
                 // 获取序列化工具
                 String serializerType = SerializerTypeEnum.getType(rpcMessage.getSerializer());
                 Serializer serializer = ExtensionLoader.getExtensionLoader(Serializer.class).getExtension(serializerType);
                 // 序列化
-                byte[] serialized = serializer.serialize(rpcMessage.getData());
-                fullLength += serialized.length;
-                // 写入数据部分
-                out.writeBytes(serialized);
+                bytes = serializer.serialize(rpcMessage.getData());
             }
+
+            // 是否需要压缩数据部分
+            if(rpcMessage.getCompress() != RpcConstants.COMPRESS_OFF){
+                int originalLen = bytes == null ? 0 : bytes.length;
+                // 获取压缩类型
+                String compressorType = CompressorTypeEnum.getType(rpcMessage.getCompress());
+                // SPI获取压缩工具实例
+                Compressor compressor = ExtensionLoader.getExtensionLoader(Compressor.class).getExtension(compressorType);
+                // 压缩数据部分
+                bytes = compressor.compress(bytes);
+                log.info("压缩类型：{}，压缩前大小：{}，压缩后大小：{}", compressorType, originalLen, bytes.length);
+            }
+
+            // 计算总长度
+            fullLength += (bytes == null ? 0 : bytes.length);
+            // 写入数据部分
+            out.writeBytes(bytes);
             int endIndex = out.writerIndex();
             // writerIndex移动到length字段位置
             out.writerIndex(endIndex - fullLength + RpcConstants.MAGIC_NUMBER.length + 1);

@@ -1,7 +1,9 @@
 package com.jay.rpc.transport.handler;
 
+import com.jay.common.enums.CompressorTypeEnum;
 import com.jay.common.enums.SerializerTypeEnum;
 import com.jay.common.extention.ExtensionLoader;
+import com.jay.rpc.compress.Compressor;
 import com.jay.rpc.constants.RpcConstants;
 import com.jay.rpc.entity.RpcMessage;
 import com.jay.rpc.entity.RpcRequest;
@@ -48,6 +50,7 @@ public class RpcDecoder extends LengthFieldBasedFrameDecoder {
 
     public RpcDecoder(int maxFrameLength, int lengthFieldOffset, int lengthFieldLength, int lengthAdjustment, int initialBytesToStrip) {
         super(maxFrameLength, lengthFieldOffset, lengthFieldLength, lengthAdjustment, initialBytesToStrip);
+
     }
 
     @Override
@@ -97,6 +100,15 @@ public class RpcDecoder extends LengthFieldBasedFrameDecoder {
             // 读取数据部分
             byte[] bytes = new byte[dataLength];
             frame.readBytes(bytes);
+            // 解压数据部分
+            if(compress != RpcConstants.COMPRESS_OFF){
+                // 找到压缩器类型
+                String compressorType = CompressorTypeEnum.getType(compress);
+                // SPI获取压缩器实例
+                Compressor compressor = ExtensionLoader.getExtensionLoader(Compressor.class).getExtension(compressorType);
+                // 解压
+                bytes = compressor.decompress(bytes);
+            }
             // 获取序列化工具名称
             String serializerType = SerializerTypeEnum.getType(rpcMessage.getSerializer());
             // SPI 工具加载序列化类

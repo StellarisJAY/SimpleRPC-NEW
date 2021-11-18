@@ -10,8 +10,13 @@ package com.jay.rpc.constants;
  **/
 public class RpcConstants {
 
+    /**
+     * Magic Number
+     */
     public static final byte[] MAGIC_NUMBER = {(byte)'s', (byte)'r', (byte)'p', (byte)'c'};
-
+    /**
+     * 版本
+     */
     public static final byte VERSION = 1;
 
     public static final int MIN_TOTAL_LENGTH = 16;
@@ -22,5 +27,13 @@ public class RpcConstants {
     public static final byte TYPE_HEARTBEAT_REQUEST = 3;
     public static final byte TYPE_HEARTBEAT_RESPONSE = 4;
 
-    public static final int MAX_MESSAGE_LENGTH = 8 * 1024 * 1024;
+    /**
+     * 报文最长长度 4 MB
+     */
+    public static final int MAX_MESSAGE_LENGTH = 4 * 1024 * 1024;
+
+    /**
+     * 是否关闭data压缩
+     */
+    public static final byte COMPRESS_OFF = 0;
 }
