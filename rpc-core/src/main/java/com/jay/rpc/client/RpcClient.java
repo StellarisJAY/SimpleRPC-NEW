@@ -6,21 +6,14 @@ import com.jay.rpc.entity.RpcMessage;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
 import com.jay.rpc.registry.Registry;
-import com.jay.rpc.transport.handler.RpcDecoder;
-import com.jay.rpc.transport.handler.RpcEncoder;
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.concurrent.Future;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -35,35 +28,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 @Slf4j
 public class RpcClient {
-    private final NioEventLoopGroup group = new NioEventLoopGroup(4);
-    private final Bootstrap bootstrap;
-
-    private final Registry registry;
-    private final UnfinishedRequestHolder unfinishedRequestHolder;
-    private final ChannelProvider channelProvider;
+    /**
+     * 注册中心
+     */
+    @Resource
+    private Registry registry;
+    /**
+     * 未完成请求缓存
+     */
+    @Resource
+    private UnfinishedRequestHolder unfinishedRequestHolder;
+    /**
+     * 请求id提供机构
+     */
+    @Resource
     private final AtomicInteger idProvider = new AtomicInteger(0);
-
-    @Autowired
-    public RpcClient(Registry registry, UnfinishedRequestHolder unfinishedRequestHolder, ChannelProvider channelProvider){
-        bootstrap = new Bootstrap()
-                .group(group)
-                .channel(NioSocketChannel.class)
-                .handler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel socketChannel){
-                        ChannelPipeline pipeline = socketChannel.pipeline();
-                        // Rpc编码器，将Rpc请求序列化
-                        pipeline.addLast(new RpcEncoder());
-                        // Rpc解码器，将Rpc返回反序列化
-                        pipeline.addLast(new RpcDecoder());
-                        pipeline.addLast(new ClientHandler(unfinishedRequestHolder));
-                    }
-                })
-                .option(ChannelOption.SO_KEEPALIVE, false);
-        this.registry = registry;
-        this.unfinishedRequestHolder = unfinishedRequestHolder;
-        this.channelProvider = channelProvider;
-    }
+    /**
+     * 连接池
+     */
+    @Resource
+    private ChannelProvider channelProvider;
 
     /**
      * 发送rpc请求
@@ -78,45 +62,33 @@ public class RpcClient {
         Channel channel = getChannel(address);
         // 封装RpcMessage
         RpcMessage message = RpcMessage.builder().data(request)
+                // 消息类型
                 .messageType(RpcConstants.TYPE_REQUEST)
+                // 压缩方式
                 .compress((byte) 1)
+                // 请求ID
                 .requestId(idProvider.getAndIncrement())
+                // 序列化方式
                 .serializer(SerializerTypeEnum.PROTOSTUFF.code)
                 .build();
 
         CompletableFuture<RpcResponse> result = new CompletableFuture<>();
         // 发送请求，使用listener监听发送状态
         channel.writeAndFlush(message).addListener((ChannelFutureListener)future->{
+            // 请求发送成功
            if(future.isSuccess()){
-               log.info("请求发送成功，requestId：{}", request.getRequestId());
-               // 请求发送成功
-               unfinishedRequestHolder.put(request.getRequestId(), result);
+               log.info("请求发送成功，消息Id：{}，requestId：{}", message.getRequestId(), request.getRequestId());
+               // 加入到未完成请求缓存
+               unfinishedRequestHolder.put(request.getRequestId(), new UnfinishedRequestHolder.UnfinishedRequest(result, channel, address));
            }
            else{
+               // 请求发送失败，future异常完成
                result.completeExceptionally(new RuntimeException("failed to send request"));
+               // 释放连接池的channel
+               channelProvider.get(address).release(channel);
            }
         });
         return result;
-    }
-
-    /**
-     * 建立连接
-     * @param address 地址
-     * @return Channel
-     * @throws ExecutionException e
-     * @throws InterruptedException e
-     */
-    private Channel doConnect(InetSocketAddress address) throws ExecutionException, InterruptedException {
-        CompletableFuture<Channel> result = new CompletableFuture<>();
-        bootstrap.connect(address).addListener((ChannelFutureListener)future->{
-            if(future.isSuccess()){
-                result.complete(future.channel());
-            }
-            else{
-                throw new RuntimeException("无法建立连接");
-            }
-        });
-        return result.get();
     }
 
     /**
@@ -127,14 +99,7 @@ public class RpcClient {
      * @throws InterruptedException e
      */
     private Channel getChannel(InetSocketAddress address) throws ExecutionException, InterruptedException {
-        if(address == null) {
-            throw new NullPointerException();
-        }
-        Channel channel = channelProvider.get(address.toString());
-        if(channel == null){
-            channel = doConnect(address);
-            channelProvider.put(address.toString(), channel);
-        }
-        return channel;
+        Future<Channel> future = channelProvider.get(address).acquire();
+        return future.get();
     }
 }

@@ -16,7 +16,8 @@ import java.util.concurrent.TimeoutException;
 /**
  * <p>
  *    RPC 代理工具
- *    生成目标接口的代理对象，代理对象的方法中通过发送RPC请求获取结果
+ *    获取目标接口的代理对象，代理对象的方法中通过发送RPC请求获取结果
+ *    将代理对象单例化，避免重复创建同一个接口的代理对象造成的开销
  * </p>
  *
  * @author Jay
@@ -42,8 +43,10 @@ public class RpcProxy {
         /*
             每一个代理对象都是懒加载单例
             使用单例是为了避免重复创建代理对象
+            重复创建的代理对象会产生大量垃圾，占用堆内存
          */
         if(!proxyInstances.containsKey(clazz)){
+            // 锁代理对象的类对象，避免不同类型的创建过程竞争锁
             synchronized (clazz){
                 if(!proxyInstances.containsKey(clazz)){
                     proxyInstances.put(clazz, createInstance(clazz, serviceName));
@@ -52,6 +55,16 @@ public class RpcProxy {
         }
         return (T)proxyInstances.get(clazz);
     }
+
+    /**
+     * 具有超时时间的实例
+     * @param clazz 接口
+     * @param applicationName 服务名
+     * @param timeout 超时时间
+     * @param timeUnit 时间单位
+     * @param <T> 接口TypeParameter
+     * @return 代理对象
+     */
     @SuppressWarnings("unchecked")
     private <T> T createInstance(Class<T> clazz, String applicationName, long timeout, TimeUnit timeUnit){
         /*
@@ -59,6 +72,7 @@ public class RpcProxy {
             对调用的方法生成代理，代理方法中通过发送RPC请求来获取返回值
          */
         Object proxyInstance = Proxy.newProxyInstance(clazz.getClassLoader(), new Class[]{clazz}, (proxy, method, args) -> {
+            // 封装RPC请求
             RpcRequest request = RpcRequest.builder()
                     .methodName(method.getName())
                     .parameters(args)
@@ -66,6 +80,7 @@ public class RpcProxy {
                     .parameterTypes(method.getParameterTypes())
                     .requestId(UUID.randomUUID().toString())
                     .build();
+            // 发送RPC请求，得到CompletableFuture
             CompletableFuture<RpcResponse> future = rpcClient.send(request, applicationName);
             try{
                 // 等待response，默认超时时间10s
@@ -85,7 +100,7 @@ public class RpcProxy {
     }
 
     /**
-     * 无超时时间参数
+     * 创建无超时时间实例，会使用默认的超时时间
      * @param clazz clazz
      * @param applicationName applicationName
      * @param <T> type

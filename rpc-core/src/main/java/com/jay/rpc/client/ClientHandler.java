@@ -17,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
  **/
 @Slf4j
 public class ClientHandler extends SimpleChannelInboundHandler<RpcMessage> {
-
     /**
      * 未完成请求缓存
      */
@@ -28,10 +27,13 @@ public class ClientHandler extends SimpleChannelInboundHandler<RpcMessage> {
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcMessage message) throws Exception {
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcMessage message)  {
+        log.info("收到response：消息ID：{}", message.getRequestId());
+        // 消息类型为Response
         if(message.getMessageType() == RpcConstants.TYPE_RESPONSE){
             RpcResponse response = (RpcResponse)message.getData();
             log.info("收到response：id={}", response.getRequestId());
+            // 完成未完成请求
             unfinishedRequestHolder.complete(response);
         }
     }
