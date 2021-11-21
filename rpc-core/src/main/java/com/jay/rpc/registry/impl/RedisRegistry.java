@@ -3,7 +3,7 @@ package com.jay.rpc.registry.impl;
 import com.jay.rpc.entity.ApplicationInfo;
 import com.jay.rpc.registry.Registry;
 import com.jay.rpc.util.RedisUtil;
-import com.jay.rpc.util.SerializationUtil;
+import com.jay.rpc.transport.serialize.protostuff.ProtoStuffSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
@@ -65,7 +65,7 @@ public class RedisRegistry extends Registry {
         return keys.stream().map(key -> {
             String serializedInfo = redisUtil.get(key);
             LOGGER.info("JSON信息：{}", serializedInfo);
-            ApplicationInfo info = SerializationUtil.deserializeJSON(serializedInfo, ApplicationInfo.class);
+            ApplicationInfo info = ProtoStuffSerializer.deserializeJSON(serializedInfo, ApplicationInfo.class);
 
             // 获取服务地址，获取到null表示服务已下线
             String addrKey = KEY_ADDRESS_PREFIX + info.getApplicationName();
@@ -81,7 +81,6 @@ public class RedisRegistry extends Registry {
     public void registerService(String applicationName, String address) throws Exception {
         String rootKey = KEY_SERVICE_PREFIX + applicationName;
         String addressKey = KEY_ADDRESS_PREFIX + applicationName;
-        String lockKey = addressKey + ".lock";
 
         /*
             Redis 每条指令是原子的，但是多条指令不是
@@ -95,7 +94,7 @@ public class RedisRegistry extends Registry {
         // 生成注册信息
         ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
         // 序列化
-        String serializedInfo = SerializationUtil.serializeJSON(applicationInfo);
+        String serializedInfo = ProtoStuffSerializer.serializeJSON(applicationInfo);
         // 保存信息
         redisUtil.set(rootKey, serializedInfo);
         // 注册服务
@@ -111,7 +110,7 @@ public class RedisRegistry extends Registry {
         // 生成注册信息
         ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
         // 序列化
-        String serializedInfo = SerializationUtil.serializeJSON(applicationInfo);
+        String serializedInfo = ProtoStuffSerializer.serializeJSON(applicationInfo);
         LOGGER.info("JSON：{}", serializedInfo);
         // 更新信息
         redisUtil.set(rootKey, serializedInfo);

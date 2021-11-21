@@ -19,8 +19,15 @@ public class RpcConstants {
      */
     public static final byte VERSION = 1;
 
+    /**
+     * 报文最小长度，data部分为空，只有16字节首部
+     */
     public static final int MIN_TOTAL_LENGTH = 16;
+    /**
+     * 首部大小
+     */
     public static final int HEAD_LENGTH = 16;
+
 
     public static final byte TYPE_REQUEST = 1;
     public static final byte TYPE_RESPONSE = 2;

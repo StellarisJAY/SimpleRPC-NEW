@@ -2,7 +2,7 @@ package com.jay.rpc.registry.impl;
 
 import com.jay.rpc.entity.ApplicationInfo;
 import com.jay.rpc.registry.Registry;
-import com.jay.rpc.util.SerializationUtil;
+import com.jay.rpc.transport.serialize.protostuff.ProtoStuffSerializer;
 import com.jay.rpc.util.ZookeeperUtil;
 import org.apache.zookeeper.*;
 import org.slf4j.Logger;
@@ -68,7 +68,7 @@ public class ZooKeeperRegistry extends Registry {
         // 生成服务器信息
         ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
         // 序列化
-        String serializedInfo = SerializationUtil.serializeJSON(applicationInfo);
+        String serializedInfo = ProtoStuffSerializer.serializeJSON(applicationInfo);
         // 写入ZooKeeper
         if(!zookeeperUtil.exists(serviceRootPath)){
             // 节点不存在，创建服务信息-持久节点
@@ -84,7 +84,7 @@ public class ZooKeeperRegistry extends Registry {
     @Override
     public void heartBeat(String applicationName, String address) {
         ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
-        String serialized = SerializationUtil.serializeJSON(applicationInfo);
+        String serialized = ProtoStuffSerializer.serializeJSON(applicationInfo);
         try {
             zookeeperUtil.setData(PATH_PREFIX + "/" + applicationName, serialized);
             logger.info("心跳，更新服务状态成功");
@@ -106,7 +106,7 @@ public class ZooKeeperRegistry extends Registry {
             for (String applicationName : applicationNames) {
                 // 获取 info 节点数据
                 String serializedInfo = zookeeperUtil.getData(PATH_PREFIX + "/" + applicationName);
-                ApplicationInfo info = SerializationUtil.deserializeJSON(serializedInfo, ApplicationInfo.class);
+                ApplicationInfo info = ProtoStuffSerializer.deserializeJSON(serializedInfo, ApplicationInfo.class);
                 // 判断是否存在地址节点，即检查节点是否还存活
                 boolean alive = zookeeperUtil.exists(PATH_PREFIX + "/" + applicationName + "/address");
                 info.setAlive(alive);
