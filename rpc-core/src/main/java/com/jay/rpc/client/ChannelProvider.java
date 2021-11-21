@@ -1,70 +1,74 @@
 package com.jay.rpc.client;
 
+import com.jay.rpc.transport.handler.RpcDecoder;
+import com.jay.rpc.transport.handler.RpcEncoder;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.pool.*;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import javax.annotation.Resource;
+import java.net.InetSocketAddress;
 
 /**
  * <p>
- *  记录 地址对应的channel
+ *  连接Provider
+ *  记录地址和对应的连接池
  * </p>
  *
  * @author Jay
  * @date 2021/11/17
  **/
 @Component
-public class ChannelProvider {
-    /**
-     * 记录地址-channel，避免每次建立TCP连接
-     */
-    private Map<String, Channel> channels = new ConcurrentHashMap<>(256);
+@Slf4j
+public class ChannelProvider extends AbstractChannelPoolMap<InetSocketAddress, SimpleChannelPool> {
+    private final NioEventLoopGroup group = new NioEventLoopGroup();
 
-    /**
-     * get channel
-     * @param address address
-     * @return Channel
-     */
-    public Channel get(String address){
-        Channel channel = channels.get(address);
-        if(channel != null){
-            if(!channel.isActive()){
-                channels.remove(address);
-            }
-            else{
-                return channel;
-            }
-        }
-        return null;
+    @Resource
+    private UnfinishedRequestHolder unfinishedRequestHolder;
+
+    @Override
+    protected SimpleChannelPool newPool(InetSocketAddress address) {
+        // channel bootstrap
+        Bootstrap bootstrap = new Bootstrap()
+                .group(group)
+                .channel(NioSocketChannel.class)
+                .option(ChannelOption.SO_KEEPALIVE, true)
+                .remoteAddress(address);
+
+        // simple连接池，无连接上限，无等待上限
+        return new SimpleChannelPool(bootstrap, new RpcChannelPoolHandler());
     }
 
     /**
-     * put channel
-     * @param address address
-     * @param channel channel
+     * 连接池处理器
+     * 处理连接释放、获取、创建事件
      */
-    public void put(String address, Channel channel){
-        /*
-            channel不存在
-         */
-        if(!channels.containsKey(address)){
-            channels.put(address, channel);
+    class RpcChannelPoolHandler implements ChannelPoolHandler {
+        @Override
+        public void channelReleased(Channel ch){
+            // 释放连接时清空channel
+            ch.flush();
         }
-        /*
-            channel存在，根据channel状态判断是否覆盖
-         */
-        else{
-            channels.compute(address, (key, originalValue)->{
-                if(originalValue == null || !originalValue.isActive()){
-                    return channel;
-                }
-                return originalValue;
-            });
-        }
-    }
 
-    public void remove(String address){
-        channels.remove(address);
+        @Override
+        public void channelAcquired(Channel ch) {
+
+        }
+
+        @Override
+        public void channelCreated(Channel ch) {
+            // 创建channel时，添加handler
+            ChannelPipeline pipeline = ch.pipeline();
+            pipeline.addLast(new RpcEncoder());
+            pipeline.addLast(new RpcDecoder());
+            pipeline.addLast(new ClientHandler(unfinishedRequestHolder));
+
+        }
     }
 }
