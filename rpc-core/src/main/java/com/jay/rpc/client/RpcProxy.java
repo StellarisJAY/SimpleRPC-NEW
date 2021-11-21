@@ -37,9 +37,36 @@ public class RpcProxy {
     @Resource
     private UnfinishedRequestHolder unfinishedRequestHolder;
 
+    /**
+     * 默认超时时间：10s
+     */
     private static final long DEFAULT_TIMEOUT = 10;
-    @SuppressWarnings("unchecked")
+
+    /**
+     * 无超时参数create
+     * @param clazz clazz
+     * @param serviceName name
+     * @param <T> Type
+     * @return T
+     */
     public <T> T create(Class<T> clazz, String serviceName){
+        return create(clazz, serviceName, DEFAULT_TIMEOUT, TimeUnit.SECONDS);
+    }
+
+    /**
+     * 带超时参数create
+     * @param clazz clazz
+     * @param serviceName name
+     * @param timeout timeout
+     * @param timeUnit timeUnit
+     * @param <T> Type
+     * @return T
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T create(Class<T> clazz, String serviceName, long timeout, TimeUnit timeUnit){
+        if(timeout < 0){
+            throw new IllegalArgumentException("timeout must be positive");
+        }
         /*
             每一个代理对象都是懒加载单例
             使用单例是为了避免重复创建代理对象
@@ -49,7 +76,7 @@ public class RpcProxy {
             // 锁代理对象的类对象，避免不同类型的创建过程竞争锁
             synchronized (clazz){
                 if(!proxyInstances.containsKey(clazz)){
-                    proxyInstances.put(clazz, createInstance(clazz, serviceName));
+                    proxyInstances.put(clazz, createInstance(clazz, serviceName, timeout, timeUnit));
                 }
             }
         }
@@ -78,13 +105,14 @@ public class RpcProxy {
                     .parameters(args)
                     .targetClass(clazz)
                     .parameterTypes(method.getParameterTypes())
+                    // 请求UUID
                     .requestId(UUID.randomUUID().toString())
                     .build();
             // 发送RPC请求，得到CompletableFuture
             CompletableFuture<RpcResponse> future = rpcClient.send(request, applicationName);
             try{
                 // 等待response，默认超时时间10s
-                RpcResponse response = future.get(timeout == 0 ? DEFAULT_TIMEOUT : timeout, timeUnit == null ? TimeUnit.SECONDS : timeUnit);
+                RpcResponse response = future.get(timeout <= 0 ? DEFAULT_TIMEOUT : timeout, timeUnit == null ? TimeUnit.SECONDS : timeUnit);
                 if(response.getError() != null){
                     throw response.getError();
                 }
@@ -97,16 +125,5 @@ public class RpcProxy {
         });
         // 返回接口类型的RPC实例
         return (T)proxyInstance;
-    }
-
-    /**
-     * 创建无超时时间实例，会使用默认的超时时间
-     * @param clazz clazz
-     * @param applicationName applicationName
-     * @param <T> type
-     * @return proxyInstance
-     */
-    private <T> T createInstance(Class<T> clazz, String applicationName){
-        return createInstance(clazz, applicationName, 0, null);
     }
 }

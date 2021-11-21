@@ -52,23 +52,26 @@ public class ChannelProvider extends AbstractChannelPoolMap<InetSocketAddress, S
     class RpcChannelPoolHandler implements ChannelPoolHandler {
         @Override
         public void channelReleased(Channel ch){
-            // 释放连接时清空channel
+            // 释放channel时清空
             ch.flush();
         }
 
         @Override
         public void channelAcquired(Channel ch) {
-
+            // channel获取成功
         }
 
         @Override
         public void channelCreated(Channel ch) {
             // 创建channel时，添加handler
             ChannelPipeline pipeline = ch.pipeline();
+            /*
+                编解码器
+             */
             pipeline.addLast(new RpcEncoder());
             pipeline.addLast(new RpcDecoder());
+            // 客户端handler
             pipeline.addLast(new ClientHandler(unfinishedRequestHolder));
-
         }
     }
 }

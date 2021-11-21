@@ -186,14 +186,14 @@ rpc.traffic.permits-per-second=100
 ![RPC-message](https://images-1257369645.cos.ap-chengdu.myqcloud.com/notes/RPC-message.png)
 
 - 头部大小共16字节。
-- 魔数（magic number）：4字节，用于识别报文。
-- 版本（version）：1字节，用于检查版本。
-- 总长度（length）：4字节，表示整个报文的长度，即头部16字节 + 数据部分长度
-- 类型（type）：1字节，区分报文类型，请求/返回/心跳。
-- 序列化方式（serializer）：1字节，数据部分序列化方式，比如Protostuff、Kyro。
-- 压缩方式（compress）：1字节，数据部分的压缩方式，比如GZIP。如果为0，表示数据部分未压缩。
-- 请求ID（request ID）：4字节，用于区分报文，有IDProvider提供的自增数值。
-- 数据部分（Data）：实际的请求或返回，序列化并压缩后的数据。
+- **魔数**（magic number）：4字节，用于识别报文。
+- **版本**（version）：1字节，用于检查版本。
+- **总长度**（length）：4字节，表示整个报文的长度，即头部16字节 + 数据部分长度
+- **类型**（type）：1字节，区分报文类型，请求/返回/心跳。
+- **序列化方式**（serializer）：1字节，数据部分序列化方式，比如Protostuff、Kyro。
+- **压缩方式**（compress）：1字节，数据部分的压缩方式，比如GZIP。如果为0，表示数据部分未压缩。
+- **请求ID**（request ID）：4字节，用于区分报文，有IDProvider提供的自增数值。
+- **数据部分**（Data）：实际的请求或返回，序列化并压缩后的数据。
 
 ### TCP粘包和拆包的解决
 
