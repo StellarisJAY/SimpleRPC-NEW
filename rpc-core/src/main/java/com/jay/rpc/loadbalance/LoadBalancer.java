@@ -15,7 +15,9 @@ public interface LoadBalancer {
     /**
      * 选择地址
      * @param addresses 地址列表
+     * @param applicationName 目标应用名称
+     * @param requestId requestId 可以根据requestId选择服务器
      * @return InetSocketAddress
      */
-    InetSocketAddress selectAddress(List<InetSocketAddress> addresses);
+    InetSocketAddress selectAddress(List<InetSocketAddress> addresses, String applicationName, String requestId);
 }
