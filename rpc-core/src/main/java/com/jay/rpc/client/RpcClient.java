@@ -1,10 +1,12 @@
 package com.jay.rpc.client;
 
 import com.jay.common.enums.SerializerTypeEnum;
+import com.jay.common.extention.ExtensionLoader;
 import com.jay.rpc.constants.RpcConstants;
 import com.jay.rpc.entity.RpcMessage;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
+import com.jay.rpc.loadbalance.LoadBalancer;
 import com.jay.rpc.registry.Registry;
 import io.netty.channel.*;
 import io.netty.util.concurrent.Future;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,7 +44,6 @@ public class RpcClient {
     /**
      * 请求id提供机构
      */
-    @Resource
     private final AtomicInteger idProvider = new AtomicInteger(0);
     /**
      * 连接池
@@ -57,7 +59,11 @@ public class RpcClient {
      */
     public CompletableFuture<RpcResponse> send(RpcRequest request, String applicationName) throws Exception{
         // 从注册中心找到address
-        InetSocketAddress address = registry.getServiceAddress(applicationName);
+        List<InetSocketAddress> addresses = registry.getServiceAddress(applicationName);
+        // 获取负载均衡器
+        LoadBalancer loadBalancer = ExtensionLoader.getExtensionLoader(LoadBalancer.class).getExtension("random");
+        // 负载均衡器选择地址
+        InetSocketAddress address = loadBalancer.selectAddress(addresses);
         // 获取channel
         Channel channel = getChannel(address);
         // 封装RpcMessage

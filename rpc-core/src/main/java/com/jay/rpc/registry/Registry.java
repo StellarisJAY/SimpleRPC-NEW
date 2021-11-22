@@ -22,7 +22,7 @@ public abstract class Registry {
      * @param serviceName 服务名称
      * @return String
      */
-    public abstract InetSocketAddress getServiceAddress(String serviceName);
+    public abstract List<InetSocketAddress> getServiceAddress(String serviceName);
 
     /**
      * 服务发现
