@@ -88,9 +88,6 @@ public class RedisRegistry extends Registry {
     @Override
     public void registerService(String applicationName, String address) throws Exception {
         String addressKey = KEY_SERVICE_PREFIX + applicationName + "." + address;
-        if(redisUtil.get(addressKey) != null){
-            throw new RuntimeException("服务名已被注册");
-        }
         // 生成注册信息
         ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
         // 序列化

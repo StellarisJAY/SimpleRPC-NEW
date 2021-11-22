@@ -1,5 +1,7 @@
 package com.jay.rpc.loadbalance;
 
+import com.jay.common.extention.SPI;
+
 import java.net.InetSocketAddress;
 import java.util.List;
 
@@ -8,6 +10,7 @@ import java.util.List;
  * @author Jay
  * @date 2021/11/22
  */
+@SPI
 public interface LoadBalancer {
     /**
      * 选择地址
