@@ -21,6 +21,9 @@ import java.util.stream.Collectors;
  * 使用Redis作为服务注册中心
  * 通过Redis的超时key来注册
  * 通过每隔一段时间向Redis重置超时时间的方式心跳检测
+ *
+ * key格式：
+ * rpc.service.{服务名}.{地址} = 主机信息
  * </p>
  *
  * @author Jay
@@ -50,11 +53,16 @@ public class RedisRegistry extends Registry {
 
 
     @Override
-    public InetSocketAddress getServiceAddress(String serviceName) {
-        String address = redisUtil.get(KEY_ADDRESS_PREFIX + serviceName);
-        String ip = address.substring(0, address.indexOf(":"));
-        int port = Integer.parseInt(address.substring(address.indexOf(":") + 1));
-        return new InetSocketAddress(ip, port);
+    public List<InetSocketAddress> getServiceAddress(String serviceName) {
+        Set<String> addresses = redisUtil.keys(KEY_SERVICE_PREFIX + serviceName + ".*");
+        return addresses.stream().map(key -> {
+            String prefix = KEY_SERVICE_PREFIX + serviceName + ".";
+            String address = key.substring(prefix.length());
+            System.out.println(address);
+            String ip = address.substring(0, address.indexOf(":"));
+            int port = Integer.parseInt(address.substring(address.indexOf(":") + 1));
+            return new InetSocketAddress(ip, port);
+        }).collect(Collectors.toList());
     }
 
     @Override
@@ -79,42 +87,29 @@ public class RedisRegistry extends Registry {
 
     @Override
     public void registerService(String applicationName, String address) throws Exception {
-        String rootKey = KEY_SERVICE_PREFIX + applicationName;
-        String addressKey = KEY_ADDRESS_PREFIX + applicationName;
-
-        /*
-            Redis 每条指令是原子的，但是多条指令不是
-            多线程下可能导致多个服务注册到一个名字下
-         */
-
-        String addrValue = redisUtil.get(addressKey);
-        if(!StringUtils.isEmpty(addrValue) && !addrValue.equals(address)){
+        String addressKey = KEY_SERVICE_PREFIX + applicationName + "." + address;
+        if(redisUtil.get(addressKey) != null){
             throw new RuntimeException("服务名已被注册");
         }
         // 生成注册信息
         ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
         // 序列化
         String serializedInfo = ProtoStuffSerializer.serializeJSON(applicationInfo);
-        // 保存信息
-        redisUtil.set(rootKey, serializedInfo);
-        // 注册服务
-        redisUtil.setEx(addressKey, address, heartBeatTime, TimeUnit.SECONDS);
+        // 注册服务，key=地址，value=主机信息
+        redisUtil.setEx(addressKey, serializedInfo, heartBeatTime, TimeUnit.SECONDS);
 
     }
 
     @Override
     public void heartBeat(String applicationName, String address){
-        String rootKey = KEY_SERVICE_PREFIX + applicationName;
-        String addressKey = KEY_ADDRESS_PREFIX + applicationName;
+        String addressKey = KEY_SERVICE_PREFIX + applicationName + "." + address;
         LOGGER.info("Redis心跳续约，appName: {}, addr: {}, 续约时长：{}", applicationName, address, heartBeatTime);
         // 生成注册信息
         ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
         // 序列化
         String serializedInfo = ProtoStuffSerializer.serializeJSON(applicationInfo);
         LOGGER.info("JSON：{}", serializedInfo);
-        // 更新信息
-        redisUtil.set(rootKey, serializedInfo);
         // 续约一个心跳周期
-        redisUtil.setEx(addressKey, address, heartBeatTime, TimeUnit.SECONDS);
+        redisUtil.setEx(addressKey, serializedInfo, heartBeatTime, TimeUnit.SECONDS);
     }
 }

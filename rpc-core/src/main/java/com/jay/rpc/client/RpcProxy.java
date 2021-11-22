@@ -120,7 +120,7 @@ public class RpcProxy {
             }catch (TimeoutException e){
                 // 超时，删除未完成请求缓存
                 unfinishedRequestHolder.remove(request.getRequestId());
-                throw new TimeoutException("request timeout");
+                throw new TimeoutException("request timeout, requestId="+request.getRequestId());
             }
         });
         // 返回接口类型的RPC实例

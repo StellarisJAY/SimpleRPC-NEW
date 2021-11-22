@@ -13,6 +13,7 @@ import javax.annotation.Resource;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -59,7 +60,7 @@ public class ZooKeeperRegistry extends Registry {
         // 服务根路径
         String serviceRootPath = PATH_PREFIX + "/" + applicationName;
         // 服务地址路径，临时节点，服务连接断开就释放
-        String serviceAddrPath = serviceRootPath + "/address";
+        String serviceAddrPath = serviceRootPath + "/" + address;
 
         if(zookeeperUtil.exists(serviceAddrPath)){
             throw new RuntimeException("服务名已被注册");
@@ -69,16 +70,12 @@ public class ZooKeeperRegistry extends Registry {
         ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
         // 序列化
         String serializedInfo = ProtoStuffSerializer.serializeJSON(applicationInfo);
-        // 写入ZooKeeper
+        // 服务根目录
         if(!zookeeperUtil.exists(serviceRootPath)){
-            // 节点不存在，创建服务信息-持久节点
-            zookeeperUtil.createPersistent(serviceRootPath, serializedInfo, ZooDefs.Ids.OPEN_ACL_UNSAFE);
-        }else{
-            // 更新服务信息
-            zookeeperUtil.setData(serviceRootPath, serializedInfo);
+            zookeeperUtil.createPersistent(serviceRootPath, "root", ZooDefs.Ids.OPEN_ACL_UNSAFE);
         }
-        // 创建服务地址-临时节点
-        zookeeperUtil.createEphemeral(serviceAddrPath, address, ZooDefs.Ids.OPEN_ACL_UNSAFE);
+        // 创建服务地址-临时节点，data记录主机信息
+        zookeeperUtil.createEphemeral(serviceAddrPath, serializedInfo, ZooDefs.Ids.OPEN_ACL_UNSAFE);
     }
 
     @Override
@@ -86,7 +83,7 @@ public class ZooKeeperRegistry extends Registry {
         ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
         String serialized = ProtoStuffSerializer.serializeJSON(applicationInfo);
         try {
-            zookeeperUtil.setData(PATH_PREFIX + "/" + applicationName, serialized);
+            zookeeperUtil.setData(PATH_PREFIX + "/" + applicationName + "/" + address, serialized);
             logger.info("心跳，更新服务状态成功");
         } catch (Exception e) {
             logger.error("心跳出现异常", e);
@@ -125,13 +122,16 @@ public class ZooKeeperRegistry extends Registry {
      * @return String
      */
     @Override
-    public InetSocketAddress getServiceAddress(String serviceName){
+    public List<InetSocketAddress> getServiceAddress(String serviceName){
         try{
             String servicePath = PATH_PREFIX + "/" + serviceName;
-            String address = zookeeperUtil.getData(servicePath + "/address");
-            String ip = address.substring(0, address.indexOf(":"));
-            int port = Integer.parseInt(address.substring(address.indexOf(":") + 1));
-            return new InetSocketAddress(ip, port);
+            List<String> children = zookeeperUtil.listChildren(servicePath);
+
+            return children.stream().map((address) -> {
+                String ip = address.substring(0, address.indexOf(":"));
+                int port = Integer.parseInt(address.substring(address.indexOf(":") + 1));
+                return new InetSocketAddress(ip, port);
+            }).collect(Collectors.toList());
         }catch (Exception e){
             logger.error("获取服务地址出现异常", e);
             return null;

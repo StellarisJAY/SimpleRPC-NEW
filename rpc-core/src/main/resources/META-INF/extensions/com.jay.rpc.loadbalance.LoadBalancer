@@ -1,0 +1,1 @@
+random=com.jay.rpc.loadbalance.impl.RandomLoadBalancer
