@@ -1,13 +1,15 @@
 package com.jay.admin.controller;
 
-import com.jay.rpc.entity.ApplicationInfo;
+import com.jay.rpc.entity.ServerInfo;
 import com.jay.rpc.registry.Registry;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -23,12 +25,12 @@ public class ServiceRegistryController {
     private Registry registry;
 
     @GetMapping("/info")
-    public String getServiceAddress(@RequestParam("service") String serviceName){
+    public List<InetSocketAddress> getServiceAddress(@RequestParam("service") String serviceName){
         return registry.getServiceAddress(serviceName);
     }
 
     @GetMapping("/discovery")
-    public List<ApplicationInfo> discoverServices(){
+    public Map<String, List<ServerInfo>> discoverServices(){
         return registry.discoverService();
     }
 }

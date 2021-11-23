@@ -1,6 +1,9 @@
 package com.jay.admin;
 
 import com.jay.rpc.annotation.EnableRpc;
+import com.jay.rpc.annotation.registry.EnableRedisRegistry;
+import com.jay.rpc.annotation.registry.EnableZooKeeperRegistry;
+import com.jay.rpc.util.RedisLock;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -12,7 +15,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author Jay
  * @date 2021/11/4
  **/
-@EnableRpc
+@EnableRpc(basePackage = "com.jay.admin")
+@EnableZooKeeperRegistry
 @SpringBootApplication
 public class AdminApplication {
     public static void main(String[] args) {
