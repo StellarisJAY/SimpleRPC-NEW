@@ -63,7 +63,7 @@ public class RpcClient {
         // 获取负载均衡器
         LoadBalancer loadBalancer = ExtensionLoader.getExtensionLoader(LoadBalancer.class).getExtension("random");
         // 负载均衡器选择地址
-        InetSocketAddress address = loadBalancer.selectAddress(addresses);
+        InetSocketAddress address = loadBalancer.selectAddress(addresses, applicationName, request.getRequestId());
         // 获取channel
         Channel channel = getChannel(address);
         // 封装RpcMessage
