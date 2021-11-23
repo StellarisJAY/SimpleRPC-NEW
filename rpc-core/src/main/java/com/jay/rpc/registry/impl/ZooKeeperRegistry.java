@@ -1,7 +1,9 @@
 package com.jay.rpc.registry.impl;
 
-import com.jay.rpc.entity.ApplicationInfo;
+import com.jay.common.extention.ExtensionLoader;
+import com.jay.rpc.entity.ServerInfo;
 import com.jay.rpc.registry.Registry;
+import com.jay.rpc.transport.serialize.Serializer;
 import com.jay.rpc.transport.serialize.protostuff.ProtoStuffSerializer;
 import com.jay.rpc.util.ZookeeperUtil;
 import org.apache.zookeeper.*;
@@ -12,7 +14,9 @@ import org.springframework.util.StringUtils;
 import javax.annotation.Resource;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -67,9 +71,10 @@ public class ZooKeeperRegistry extends Registry {
         }
 
         // 生成服务器信息
-        ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
+        ServerInfo serverInfo = getApplicationInfo(applicationName, address);
         // 序列化
-        String serializedInfo = ProtoStuffSerializer.serializeJSON(applicationInfo);
+        Serializer serializer = ExtensionLoader.getExtensionLoader(Serializer.class).getExtension("json");
+        String serializedInfo = new String(serializer.serialize(serverInfo));
         // 服务根目录
         if(!zookeeperUtil.exists(serviceRootPath)){
             zookeeperUtil.createPersistent(serviceRootPath, "root", ZooDefs.Ids.OPEN_ACL_UNSAFE);
@@ -80,8 +85,10 @@ public class ZooKeeperRegistry extends Registry {
 
     @Override
     public void heartBeat(String applicationName, String address) {
-        ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
-        String serialized = ProtoStuffSerializer.serializeJSON(applicationInfo);
+        ServerInfo serverInfo = getApplicationInfo(applicationName, address);
+        // 序列化
+        Serializer serializer = ExtensionLoader.getExtensionLoader(Serializer.class).getExtension("json");
+        String serialized = new String(serializer.serialize(serverInfo));
         try {
             zookeeperUtil.setData(PATH_PREFIX + "/" + applicationName + "/" + address, serialized);
             logger.info("心跳，更新服务状态成功");
@@ -96,20 +103,28 @@ public class ZooKeeperRegistry extends Registry {
      * @return Zookeeper中的所有服务
      */
     @Override
-    public List<ApplicationInfo> discoverService(){
+    public Map<String, List<ServerInfo>> discoverService(){
         try {
-            List<String> applicationNames = zookeeperUtil.listChildren("/rpc/services");
-            List<ApplicationInfo> infos = new ArrayList<>(applicationNames.size());
-            for (String applicationName : applicationNames) {
-                // 获取 info 节点数据
-                String serializedInfo = zookeeperUtil.getData(PATH_PREFIX + "/" + applicationName);
-                ApplicationInfo info = ProtoStuffSerializer.deserializeJSON(serializedInfo, ApplicationInfo.class);
-                // 判断是否存在地址节点，即检查节点是否还存活
-                boolean alive = zookeeperUtil.exists(PATH_PREFIX + "/" + applicationName + "/address");
-                info.setAlive(alive);
-                infos.add(info);
+            // 获取所有服务名
+            List<String> applicationNames = zookeeperUtil.listChildren(PATH_PREFIX);
+            Map<String, List<ServerInfo>> result = new HashMap<>(16);
+            for(String applicationName : applicationNames){
+                // 获取服务名对应的list
+                List<ServerInfo> servers = result.computeIfAbsent(applicationName, k->new ArrayList<>());
+                // 获取服务名下的地址
+                List<String> addresses = zookeeperUtil.listChildren(PATH_PREFIX + "/" + applicationName);
+                for(String address : addresses){
+                    // 获取该地址对应的服务器信息
+                    String serializedInfo = zookeeperUtil.getData(PATH_PREFIX + "/" + applicationName + "/" + address);
+                    // 反序列化
+                    Serializer serializer = ExtensionLoader.getExtensionLoader(Serializer.class).getExtension("json");
+                    ServerInfo serverInfo = serializer.deserialize(serializedInfo.getBytes(), ServerInfo.class);
+                    serverInfo.setAlive(true);
+                    // 写入结果
+                    servers.add(serverInfo);
+                }
             }
-            return infos;
+            return result;
         } catch (Exception e) {
             logger.error("服务发现出现异常", e);
             throw new RuntimeException("服务发现出现异常");
@@ -125,9 +140,11 @@ public class ZooKeeperRegistry extends Registry {
     public List<InetSocketAddress> getServiceAddress(String serviceName){
         try{
             String servicePath = PATH_PREFIX + "/" + serviceName;
+            // 获取服务名下的所有地址
             List<String> children = zookeeperUtil.listChildren(servicePath);
 
             return children.stream().map((address) -> {
+                // 解析地址字符串，返回InetSocketAddress
                 String ip = address.substring(0, address.indexOf(":"));
                 int port = Integer.parseInt(address.substring(address.indexOf(":") + 1));
                 return new InetSocketAddress(ip, port);

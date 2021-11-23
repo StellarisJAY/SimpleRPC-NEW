@@ -1,18 +1,16 @@
 package com.jay.rpc.registry.impl;
 
-import com.jay.rpc.entity.ApplicationInfo;
+import com.jay.common.extention.ExtensionLoader;
+import com.jay.rpc.entity.ServerInfo;
 import com.jay.rpc.registry.Registry;
+import com.jay.rpc.transport.serialize.Serializer;
 import com.jay.rpc.util.RedisUtil;
-import com.jay.rpc.transport.serialize.protostuff.ProtoStuffSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -36,10 +34,6 @@ public class RedisRegistry extends Registry {
      * 服务信息 key 前缀
      */
     private final String KEY_SERVICE_PREFIX = "rpc.service.";
-    /**
-     * 服务地址 key 前缀
-     */
-    private final String KEY_ADDRESS_PREFIX = "rpc.address.";
     private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
 
     /**
@@ -66,32 +60,35 @@ public class RedisRegistry extends Registry {
     }
 
     @Override
-    public List<ApplicationInfo> discoverService() {
+    public Map<String, List<ServerInfo>> discoverService() {
         // 获取所有的服务key
         Set<String> keys = redisUtil.keys(KEY_SERVICE_PREFIX + "*");
+        Map<String, List<ServerInfo>> result = new HashMap<>(16);
+        keys.forEach(key -> {
+            // key is like rpc.service.xxx@192.168.154.128:9000
+            int split = key.lastIndexOf('@');
+            String applicationName = key.substring(KEY_SERVICE_PREFIX.length(), split);
 
-        return keys.stream().map(key -> {
+            List<ServerInfo> servers = result.computeIfAbsent(applicationName, k -> new ArrayList<>());
+
             String serializedInfo = redisUtil.get(key);
-            LOGGER.info("JSON信息：{}", serializedInfo);
-            ApplicationInfo info = ProtoStuffSerializer.deserializeJSON(serializedInfo, ApplicationInfo.class);
-
-            // 获取服务地址，获取到null表示服务已下线
-            String addrKey = KEY_ADDRESS_PREFIX + info.getApplicationName();
-            String addr = redisUtil.get(addrKey);
-            info.setAddress(addr);
-            // 设置服务状态
-            info.setAlive(addr != null);
-            return info;
-        }).collect(Collectors.toList());
+            Serializer serializer = ExtensionLoader.getExtensionLoader(Serializer.class).getExtension("json");
+            ServerInfo info = serializer.deserialize(serializedInfo.getBytes(), ServerInfo.class);
+            // 上次心跳时间间隔超过了心跳周期
+            info.setAlive(System.currentTimeMillis() - info.getLastHeartBeatTime() > heartBeatTime);
+            servers.add(info);
+        });
+        return result;
     }
 
     @Override
     public void registerService(String applicationName, String address) throws Exception {
-        String addressKey = KEY_SERVICE_PREFIX + applicationName + "." + address;
+        String addressKey = KEY_SERVICE_PREFIX + applicationName + "@" + address;
         // 生成注册信息
-        ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
+        ServerInfo serverInfo = getApplicationInfo(applicationName, address);
+        Serializer serializer = ExtensionLoader.getExtensionLoader(Serializer.class).getExtension("json");
         // 序列化
-        String serializedInfo = ProtoStuffSerializer.serializeJSON(applicationInfo);
+        String serializedInfo = new String(serializer.serialize(serverInfo));
         // 注册服务，key=地址，value=主机信息
         redisUtil.setEx(addressKey, serializedInfo, heartBeatTime, TimeUnit.SECONDS);
 
@@ -99,13 +96,13 @@ public class RedisRegistry extends Registry {
 
     @Override
     public void heartBeat(String applicationName, String address){
-        String addressKey = KEY_SERVICE_PREFIX + applicationName + "." + address;
+        String addressKey = KEY_SERVICE_PREFIX + applicationName + "@" + address;
         LOGGER.info("Redis心跳续约，appName: {}, addr: {}, 续约时长：{}", applicationName, address, heartBeatTime);
         // 生成注册信息
-        ApplicationInfo applicationInfo = getApplicationInfo(applicationName, address);
+        ServerInfo serverInfo = getApplicationInfo(applicationName, address);
+        Serializer serializer = ExtensionLoader.getExtensionLoader(Serializer.class).getExtension("json");
         // 序列化
-        String serializedInfo = ProtoStuffSerializer.serializeJSON(applicationInfo);
-        LOGGER.info("JSON：{}", serializedInfo);
+        String serializedInfo = new String(serializer.serialize(serverInfo));
         // 续约一个心跳周期
         redisUtil.setEx(addressKey, serializedInfo, heartBeatTime, TimeUnit.SECONDS);
     }

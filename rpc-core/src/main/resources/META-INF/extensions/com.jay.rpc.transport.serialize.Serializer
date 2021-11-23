@@ -1,1 +1,2 @@
 protostuff=com.jay.rpc.transport.serialize.protostuff.ProtoStuffSerializer
+json=com.jay.rpc.transport.serialize.json.JsonSerializer

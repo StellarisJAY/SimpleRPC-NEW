@@ -1,10 +1,11 @@
 package com.jay.rpc.registry;
 
 import com.jay.rpc.discovery.ServiceMapper;
-import com.jay.rpc.entity.ApplicationInfo;
+import com.jay.rpc.entity.ServerInfo;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -28,7 +29,7 @@ public abstract class Registry {
      * 服务发现
      * @return List
      */
-    public abstract List<ApplicationInfo> discoverService();
+    public abstract Map<String, List<ServerInfo>> discoverService();
 
     /**
      * 注册服务
@@ -57,14 +58,14 @@ public abstract class Registry {
         executor.scheduleAtFixedRate(()->heartBeat(applicationName, address), heartBeatTime, heartBeatTime, TimeUnit.SECONDS);
     }
 
-    public ApplicationInfo getApplicationInfo(String applicationName, String address){
-        ApplicationInfo applicationInfo = new ApplicationInfo();
-        applicationInfo.setApplicationName(applicationName);
-        applicationInfo.setAddress(address);
-        applicationInfo.setLastHeartBeatTime(System.currentTimeMillis());
-        applicationInfo.setServiceCount(ServiceMapper.getServiceCount());
-        applicationInfo.setServiceInterfaces(ServiceMapper.getServiceInterfaces());
+    public ServerInfo getApplicationInfo(String applicationName, String address){
+        ServerInfo serverInfo = new ServerInfo();
+        serverInfo.setApplicationName(applicationName);
+        serverInfo.setAddress(address);
+        serverInfo.setLastHeartBeatTime(System.currentTimeMillis());
+        serverInfo.setServiceCount(ServiceMapper.getServiceCount());
+        serverInfo.setServiceInterfaces(ServiceMapper.getServiceInterfaces());
 
-        return applicationInfo;
+        return serverInfo;
     }
 }

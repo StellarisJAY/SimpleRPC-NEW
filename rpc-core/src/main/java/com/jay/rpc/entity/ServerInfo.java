@@ -10,7 +10,7 @@ import java.util.Set;
  * @author Jay
  * @date 2021/11/5
  **/
-public class ApplicationInfo {
+public class ServerInfo {
     private String applicationName;
     private String address;
     private long lastHeartBeatTime;
