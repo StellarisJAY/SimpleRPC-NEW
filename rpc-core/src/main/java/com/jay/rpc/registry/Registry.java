@@ -2,6 +2,7 @@ package com.jay.rpc.registry;
 
 import com.jay.rpc.discovery.ServiceMapper;
 import com.jay.rpc.entity.ServerInfo;
+import com.jay.rpc.entity.ServiceInfo;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -29,7 +30,7 @@ public abstract class Registry {
      * 服务发现
      * @return List
      */
-    public abstract Map<String, List<ServerInfo>> discoverService();
+    public abstract List<ServiceInfo> discoverService();
 
     /**
      * 注册服务
@@ -58,14 +59,12 @@ public abstract class Registry {
         executor.scheduleAtFixedRate(()->heartBeat(applicationName, address), heartBeatTime, heartBeatTime, TimeUnit.SECONDS);
     }
 
-    public ServerInfo getApplicationInfo(String applicationName, String address){
-        ServerInfo serverInfo = new ServerInfo();
-        serverInfo.setApplicationName(applicationName);
-        serverInfo.setAddress(address);
-        serverInfo.setLastHeartBeatTime(System.currentTimeMillis());
-        serverInfo.setServiceCount(ServiceMapper.getServiceCount());
-        serverInfo.setServiceInterfaces(ServiceMapper.getServiceInterfaces());
-
-        return serverInfo;
+    public ServerInfo getServerInfo(String address){
+        return ServerInfo.builder()
+                .address(address)
+                .lastHeartBeatTime(System.currentTimeMillis())
+                .availableProcessors(Runtime.getRuntime().availableProcessors())
+                .maxMemory(Runtime.getRuntime().maxMemory())
+                .build();
     }
 }

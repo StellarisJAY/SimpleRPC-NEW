@@ -2,9 +2,9 @@ package com.jay.rpc.registry.impl;
 
 import com.jay.common.extention.ExtensionLoader;
 import com.jay.rpc.entity.ServerInfo;
+import com.jay.rpc.entity.ServiceInfo;
 import com.jay.rpc.registry.Registry;
 import com.jay.rpc.transport.serialize.Serializer;
-import com.jay.rpc.transport.serialize.protostuff.ProtoStuffSerializer;
 import com.jay.rpc.util.ZookeeperUtil;
 import org.apache.zookeeper.*;
 import org.slf4j.Logger;
@@ -71,7 +71,7 @@ public class ZooKeeperRegistry extends Registry {
         }
 
         // 生成服务器信息
-        ServerInfo serverInfo = getApplicationInfo(applicationName, address);
+        ServerInfo serverInfo = getServerInfo(address);
         // 序列化
         Serializer serializer = ExtensionLoader.getExtensionLoader(Serializer.class).getExtension("json");
         String serializedInfo = new String(serializer.serialize(serverInfo));
@@ -85,7 +85,7 @@ public class ZooKeeperRegistry extends Registry {
 
     @Override
     public void heartBeat(String applicationName, String address) {
-        ServerInfo serverInfo = getApplicationInfo(applicationName, address);
+        ServerInfo serverInfo = getServerInfo(address);
         // 序列化
         Serializer serializer = ExtensionLoader.getExtensionLoader(Serializer.class).getExtension("json");
         String serialized = new String(serializer.serialize(serverInfo));
@@ -103,16 +103,15 @@ public class ZooKeeperRegistry extends Registry {
      * @return Zookeeper中的所有服务
      */
     @Override
-    public Map<String, List<ServerInfo>> discoverService(){
+    public List<ServiceInfo> discoverService(){
         try {
             // 获取所有服务名
             List<String> applicationNames = zookeeperUtil.listChildren(PATH_PREFIX);
-            Map<String, List<ServerInfo>> result = new HashMap<>(16);
+            List<ServiceInfo> result = new ArrayList<>(applicationNames.size());
             for(String applicationName : applicationNames){
-                // 获取服务名对应的list
-                List<ServerInfo> servers = result.computeIfAbsent(applicationName, k->new ArrayList<>());
                 // 获取服务名下的地址
                 List<String> addresses = zookeeperUtil.listChildren(PATH_PREFIX + "/" + applicationName);
+                List<ServerInfo> servers = new ArrayList<>(addresses.size());
                 for(String address : addresses){
                     // 获取该地址对应的服务器信息
                     String serializedInfo = zookeeperUtil.getData(PATH_PREFIX + "/" + applicationName + "/" + address);
@@ -120,9 +119,16 @@ public class ZooKeeperRegistry extends Registry {
                     Serializer serializer = ExtensionLoader.getExtensionLoader(Serializer.class).getExtension("json");
                     ServerInfo serverInfo = serializer.deserialize(serializedInfo.getBytes(), ServerInfo.class);
                     serverInfo.setAlive(true);
-                    // 写入结果
                     servers.add(serverInfo);
                 }
+                // 封装服务信息
+                ServiceInfo serviceInfo = ServiceInfo.builder()
+                        .servers(servers)
+                        .serviceName(applicationName)
+                        .serverCount(servers.size())
+                        .build();
+                // 添加到结果集
+                result.add(serviceInfo);
             }
             return result;
         } catch (Exception e) {
