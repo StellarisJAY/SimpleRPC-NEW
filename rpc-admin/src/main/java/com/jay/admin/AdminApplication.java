@@ -16,7 +16,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @date 2021/11/4
  **/
 @EnableRpc(basePackage = "com.jay.admin")
-@EnableZooKeeperRegistry
+@EnableRedisRegistry
 @SpringBootApplication
 public class AdminApplication {
     public static void main(String[] args) {
