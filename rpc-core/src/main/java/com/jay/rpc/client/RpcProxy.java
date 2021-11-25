@@ -73,8 +73,8 @@ public class RpcProxy {
             重复创建的代理对象会产生大量垃圾，占用堆内存
          */
         if(!proxyInstances.containsKey(clazz)){
-            // 锁代理对象的类对象，避免不同类型的创建过程竞争锁
-            synchronized (clazz){
+            // DCL
+            synchronized (proxyInstances){
                 if(!proxyInstances.containsKey(clazz)){
                     proxyInstances.put(clazz, createInstance(clazz, serviceName, timeout, timeUnit));
                 }

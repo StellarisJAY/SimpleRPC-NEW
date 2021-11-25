@@ -36,6 +36,7 @@ import lombok.extern.slf4j.Slf4j;
  *   compress：body是否压缩
  *   requestId：消息ID，自增int
  *   data：消息体
+ * @see io.netty.handler.codec.LengthFieldBasedFrameDecoder 解决粘包拆包
  * </p>
  *
  * @author Jay
@@ -45,6 +46,12 @@ import lombok.extern.slf4j.Slf4j;
 public class RpcDecoder extends LengthFieldBasedFrameDecoder {
 
     public RpcDecoder() {
+        /*
+            maxFrameLength：报文最大长度
+            lengthFieldOffset：长度字段偏移，即长度字段在报文中的位置，此处为第六个字节，下标为5
+            lengthAdjustment：长度字段结束位置+长度值 - lengthAdjustment = decode返回数据结尾位置
+            initialBytesToStrip：decode方法返回的数据的起始位置，此处因为要校验魔数和版本，所以起始位置是0
+         */
         this(RpcConstants.MAX_MESSAGE_LENGTH, 5, 4, -9, 0);
     }
 

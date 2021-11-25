@@ -2,11 +2,10 @@ package com.jay.rpc.entity;
 
 import lombok.*;
 
-import java.util.Set;
 
 /**
  * <p>
- *
+ *  服务器信息
  * </p>
  *
  * @author Jay
@@ -19,11 +18,25 @@ import java.util.Set;
 @NoArgsConstructor
 @Builder
 public class ServerInfo {
-
+    /**
+     * 地址 ip:port
+     */
     private String address;
+    /**
+     * 上次心跳时间
+     */
     private long lastHeartBeatTime;
+    /**
+     * 是否存活
+     */
     private boolean alive;
 
+    /**
+     * maxMem
+     */
     private long maxMemory;
+    /**
+     * CPUs
+     */
     private int availableProcessors;
 }

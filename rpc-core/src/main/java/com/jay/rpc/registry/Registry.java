@@ -1,12 +1,10 @@
 package com.jay.rpc.registry;
 
-import com.jay.rpc.discovery.ServiceMapper;
 import com.jay.rpc.entity.ServerInfo;
 import com.jay.rpc.entity.ServiceInfo;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 

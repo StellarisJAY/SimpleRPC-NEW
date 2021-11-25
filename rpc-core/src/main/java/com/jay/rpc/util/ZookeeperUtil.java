@@ -1,10 +1,9 @@
 package com.jay.rpc.util;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 
 import javax.annotation.PostConstruct;
@@ -21,18 +20,16 @@ import java.util.concurrent.CountDownLatch;
  * @author Jay
  * @date 2021/10/28
  **/
+@Slf4j
 public class ZookeeperUtil {
     /**
      * Zookeeper 实例
      */
     private final ZooKeeper zooKeeper;
-    private String zkHosts;
-    private int sessionTimeout;
+    private final String zkHosts;
+    private final int sessionTimeout;
 
     private static final int DEFAULT_RETRY_TIME = 3;
-    private static final int RETRY_WAIT_TIME = 300;
-    private Logger LOGGER = LoggerFactory.getLogger(ZookeeperUtil.class);
-
 
     public ZookeeperUtil(@Value("${rpc.service.registry.zk.hosts}") String zkHosts,
                          @Value("${rpc.service.registry.zk.session-timeout}")int sessionTimeout) throws IOException, InterruptedException {
@@ -55,9 +52,9 @@ public class ZookeeperUtil {
                 countDownLatch.countDown();
             }
         });
-        LOGGER.info("等待ZooKeeper连接建立");
+        log.info("等待ZooKeeper连接建立");
         countDownLatch.await();
-        LOGGER.info("ZooKeeper连接成功，用时：{}ms", System.currentTimeMillis() - startTime);
+        log.info("ZooKeeper连接成功，用时：{}ms", System.currentTimeMillis() - startTime);
         return zooKeeper;
     }
 
@@ -134,7 +131,7 @@ public class ZookeeperUtil {
         while(retry < DEFAULT_RETRY_TIME){
             try{
                 // 获取当前版本
-                byte[] oldData = zooKeeper.getData(path, false, stat);
+                zooKeeper.getData(path, false, stat);
                 // CAS修改
                 zooKeeper.setData(path, data.getBytes(), stat.getVersion());
                 return;

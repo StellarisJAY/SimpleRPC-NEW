@@ -1,7 +1,6 @@
 package com.jay.rpc.compress.gzip;
 
 import com.jay.rpc.compress.Compressor;
-import io.protostuff.ByteArrayInput;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

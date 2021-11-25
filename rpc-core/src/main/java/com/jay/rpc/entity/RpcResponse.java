@@ -16,8 +16,20 @@ import lombok.*;
 @Getter
 @Builder
 public class RpcResponse {
+    /**
+     * 对应请求ID
+     */
     private String requestId;
+    /**
+     * 方法抛出异常
+     */
     private Throwable error;
+    /**
+     * 返回值类型
+     */
     private Class<?> returnType;
+    /**
+     * 返回值
+     */
     private Object result;
 }

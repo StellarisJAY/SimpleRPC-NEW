@@ -16,33 +16,29 @@ import java.util.concurrent.ConcurrentHashMap;
  **/
 public class ConsistentHashLoadBalancer extends AbstractLoadBalancer {
 
-    private static ConcurrentHashMap<String, ConsistentHashSelector> selectorHolder = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, ConsistentHashSelector> SELECTOR_HOLDER = new ConcurrentHashMap<>();
 
     @Override
     public InetSocketAddress doSelect(List<InetSocketAddress> addresses, String applicationName, String requestId) {
-        long identityHash = System.identityHashCode(applicationName);
         // 获取该服务的选择器
-        ConsistentHashSelector selector = selectorHolder.get(applicationName);
+        ConsistentHashSelector selector = SELECTOR_HOLDER.get(applicationName);
         // 选择器不存在，新建选择器
         if(selector == null){
-            selector = new ConsistentHashSelector(addresses, identityHash);
-            selectorHolder.put(applicationName, selector);
+            selector = new ConsistentHashSelector(addresses);
+            SELECTOR_HOLDER.put(applicationName, selector);
         }
         return selector.select(requestId);
     }
 
 
     static class ConsistentHashSelector{
-        private long identityHash;
-        private TreeMap<Long, InetSocketAddress> hashCircle;
+        private final TreeMap<Long, InetSocketAddress> hashCircle;
 
-        public ConsistentHashSelector(List<InetSocketAddress> addresses, long identityHash){
-            this.identityHash = identityHash;
+        public ConsistentHashSelector(List<InetSocketAddress> addresses){
             this.hashCircle = new TreeMap<>();
             // 把所有地址写入hash环
             for(InetSocketAddress address : addresses){
                 long hashcode = hash(address.toString());
-                System.out.println(hashcode);
                 hashCircle.put(hashcode, address);
             }
         }
@@ -56,9 +52,9 @@ public class ConsistentHashLoadBalancer extends AbstractLoadBalancer {
         public InetSocketAddress select(String requestId){
             long hashcode = hash(requestId);
 
-            // 找到离该hashcode最近的下一个entry
+            // 找到大于等于的hashcode的keys的第一个
             Map.Entry<Long, InetSocketAddress> firstEntry = hashCircle.tailMap(hashcode, true).firstEntry();
-            // 不存在，表示下一个应该是头节点
+            // 不存在，表示没有比hashcode大的，返回hash环的第一个节点
             if(firstEntry == null){
                 firstEntry = hashCircle.firstEntry();
             }

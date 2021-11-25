@@ -1,6 +1,5 @@
 package com.jay.rpc.loadbalance.impl;
 
-import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.loadbalance.AbstractLoadBalancer;
 
 import java.net.InetSocketAddress;
@@ -21,6 +20,7 @@ public class RandomLoadBalancer extends AbstractLoadBalancer {
     @Override
     public InetSocketAddress doSelect(List<InetSocketAddress> addresses, String applicationName, String requestId) {
         Random random = new Random();
+        // 从addresses列表随机选择一个地址
         return addresses.get(random.nextInt(addresses.size()));
     }
 }
