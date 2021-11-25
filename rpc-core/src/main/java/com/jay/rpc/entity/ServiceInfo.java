@@ -20,9 +20,25 @@ import java.util.Set;
 @NoArgsConstructor
 @Builder
 public class ServiceInfo {
+    /**
+     * 服务名
+     */
     private String serviceName;
+    /**
+     * 活跃服务器数量
+     */
     private int serverCount;
-    private int interfaceCount;
-    private Set<Class<?>> serviceInterfaces;
+    /**
+     * 服务器列表
+     */
     private List<ServerInfo> servers;
+    /**
+     * 接口数量
+     */
+    private int interfaceCount;
+    /**
+     * 接口列表
+     */
+    private Set<Class<?>> serviceInterfaces;
+
 }

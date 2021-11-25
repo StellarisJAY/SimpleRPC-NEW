@@ -34,14 +34,14 @@ import lombok.extern.slf4j.Slf4j;
  *   requestId：消息ID，自增int
  *   data：消息体
  * </p>
- *
+ * @see io.netty.handler.codec.MessageToByteEncoder 输入ByteBuf，输出RpcMessage
  * @author Jay
  * @date 2021/10/13
  **/
 @Slf4j
 public class RpcEncoder extends MessageToByteEncoder<RpcMessage> {
     @Override
-    protected void encode(ChannelHandlerContext channelHandlerContext, RpcMessage rpcMessage, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext channelHandlerContext, RpcMessage rpcMessage, ByteBuf out){
         try{
             // 写入魔数和版本
             out.writeBytes(RpcConstants.MAGIC_NUMBER);
@@ -54,6 +54,7 @@ public class RpcEncoder extends MessageToByteEncoder<RpcMessage> {
             out.writeByte(rpcMessage.getCompress());
             out.writeInt(rpcMessage.getRequestId());
 
+            // 总长度，默认为首部长度
             int fullLength = RpcConstants.HEAD_LENGTH;
             byte[] bytes = null;
             // 消息类型是请求或返回

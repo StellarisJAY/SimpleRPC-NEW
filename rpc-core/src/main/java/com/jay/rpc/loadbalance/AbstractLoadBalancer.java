@@ -1,5 +1,6 @@
 package com.jay.rpc.loadbalance;
 
+
 import java.net.InetSocketAddress;
 import java.util.List;
 
@@ -13,15 +14,16 @@ import java.util.List;
  **/
 public abstract class AbstractLoadBalancer implements LoadBalancer {
     @Override
-    public InetSocketAddress selectAddress(List<InetSocketAddress> addresses) {
+    public InetSocketAddress selectAddress(List<InetSocketAddress> addresses, String applicationName, String requestId) {
         if(addresses == null || addresses.isEmpty()){
             throw new NullPointerException();
         }
+        // 候选服务器只有一个，直接返回该服务器
         if(addresses.size() == 1){
             return addresses.get(0);
         }
-        return doSelect(addresses);
+        return doSelect(addresses, applicationName, requestId);
     }
 
-    public abstract InetSocketAddress doSelect(List<InetSocketAddress> addresses);
+    public abstract InetSocketAddress doSelect(List<InetSocketAddress> addresses, String applicationName, String requestId);
 }

@@ -8,9 +8,6 @@ import com.jay.rpc.entity.RpcResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
 
 import java.lang.reflect.Method;
 
@@ -25,13 +22,6 @@ import java.lang.reflect.Method;
  **/
 @Slf4j
 public class RpcRequestHandler extends SimpleChannelInboundHandler<RpcMessage> {
-
-    private final ApplicationContext applicationContext;
-    private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
-
-    public RpcRequestHandler(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
-    }
 
     @Override
     protected void channelRead0(ChannelHandlerContext context, RpcMessage message) {
@@ -57,28 +47,30 @@ public class RpcRequestHandler extends SimpleChannelInboundHandler<RpcMessage> {
     }
 
     private RpcResponse handleRequest(ChannelHandlerContext context, RpcRequest rpcRequest){
-        LOGGER.info("接收到RPC请求，目标接口：{}，目标方法：{}", rpcRequest.getTargetClass(), rpcRequest.getMethodName());
+        log.info("接收到RPC请求，来自：{}, 目标接口：{}，目标方法：{}",context.channel().remoteAddress(), rpcRequest.getTargetClass(), rpcRequest.getMethodName());
         // 目标类
         Class<?> targetClass = rpcRequest.getTargetClass();
 
-
+        // 获取接口实现类
         Object instance = ServiceMapper.getServiceImpl(targetClass);
-        LOGGER.info("已获得服务实现类实例：{}", instance);
+        log.info("已获得服务实现类实例：{}", instance);
         // 从Spring容器获取RPC业务Bean
-        RpcResponse response = new RpcResponse();
+        RpcResponse.RpcResponseBuilder responseBuilder = RpcResponse
+                .builder()
+                .requestId(rpcRequest.getRequestId());
         try{
             // 调用目标方法
             Method targetMethod = targetClass.getMethod(rpcRequest.getMethodName(), rpcRequest.getParameterTypes());
             Object result = targetMethod.invoke(instance, rpcRequest.getParameters());
-            response.setResult(result);
-            response.setRequestId(rpcRequest.getRequestId());
             // 方法返回类型，如果是void，将返回类型设为Object，避免序列化错误
-            response.setReturnType(targetMethod.getReturnType() == Void.TYPE ? Object.class : targetMethod.getReturnType());
+            responseBuilder
+                    .result(result)
+                    .returnType(targetMethod.getReturnType() == Void.TYPE ? Object.class : targetMethod.getReturnType());
         }catch (Exception e){
-            LOGGER.error("方法调用异常：", e);
+            log.error("方法调用异常：", e);
             // 将异常写入响应报文
-            response.setError(e);
+            responseBuilder.error(e);
         }
-        return response;
+        return responseBuilder.build();
     }
 }

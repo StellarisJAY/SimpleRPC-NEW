@@ -1,7 +1,6 @@
 package com.jay.rpc.discovery;
 
 import java.util.HashMap;
-import java.util.Set;
 
 /**
  * <p>
@@ -18,7 +17,7 @@ public class ServiceMapper {
      * 记录 接口和实现类的映射
      * HashMap初始大小设为256来避免扩容
      */
-    private static final HashMap<Class<?>, Object> map = new HashMap<>(256);
+    private static final HashMap<Class<?>, Object> SERVICE_INSTANCES = new HashMap<>(256);
 
     /**
      * 获取服务接口的实现Bean
@@ -26,10 +25,10 @@ public class ServiceMapper {
      * @param bean bean
      */
     public static void put(Class<?> service, Object bean){
-        if(map.containsKey(service)){
+        if(SERVICE_INSTANCES.containsKey(service)){
             throw new RuntimeException("RPC接口重复实现，接口：" + service);
         }
-        map.put(service, bean);
+        SERVICE_INSTANCES.put(service, bean);
     }
 
     /**
@@ -38,14 +37,6 @@ public class ServiceMapper {
      * @return bean
      */
     public static Object getServiceImpl(Class<?> service){
-        return map.get(service);
-    }
-
-    public static int getServiceCount(){
-        return map.size();
-    }
-
-    public static Set<Class<?>> getServiceInterfaces(){
-        return map.keySet();
+        return SERVICE_INSTANCES.get(service);
     }
 }

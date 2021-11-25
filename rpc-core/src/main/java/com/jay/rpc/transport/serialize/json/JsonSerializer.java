@@ -5,7 +5,7 @@ import com.jay.rpc.transport.serialize.Serializer;
 
 /**
  * <p>
- *
+ *  JSON序列化工具
  * </p>
  *
  * @author Jay
@@ -19,6 +19,6 @@ public class JsonSerializer implements Serializer {
 
     @Override
     public <T> T deserialize(byte[] bytes, Class<T> clazz) {
-        return JSON.parseObject(bytes, clazz, null);
+        return JSON.parseObject(bytes, clazz);
     }
 }

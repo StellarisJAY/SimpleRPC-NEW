@@ -13,8 +13,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -37,19 +36,30 @@ import java.util.Set;
  * @date 2021/10/13
  **/
 @Component
+@Slf4j
 public class RpcServer implements ApplicationContextAware {
     private final NioEventLoopGroup bossGroup = new NioEventLoopGroup();
     private final NioEventLoopGroup workerGroup = new NioEventLoopGroup(4);
-
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    /**
+     * RPC服务器端口
+     */
     @Value("${rpc.service.port:9000}")
     private String port;
 
+    /**
+     * RPC服务名
+     */
     @Value("${spring.application.name}")
     private String applicationName;
 
+    /**
+     * 是否开启服务端限流
+     */
     @Value("${rpc.traffic.enable-control:true}")
     private boolean enableTrafficControl;
+    /**
+     * 限流QPS
+     */
     @Value("${rpc.traffic.permits-per-second:1000}")
     private int permitsPerSecond;
 
@@ -59,6 +69,9 @@ public class RpcServer implements ApplicationContextAware {
      * 用户自定义过滤器集合
      */
     private Set<Filter> filters;
+    /**
+     * 注册中心实例
+     */
     @Resource
     private Registry serviceRegistry;
 
@@ -90,7 +103,7 @@ public class RpcServer implements ApplicationContextAware {
                             pipeline.addLast(filter);
                         }
                         // Rpc请求处理器
-                        pipeline.addLast(new RpcRequestHandler(context));
+                        pipeline.addLast(new RpcRequestHandler());
 
                         // Rpc编码器
                         pipeline.addLast(new RpcEncoder());
@@ -108,7 +121,7 @@ public class RpcServer implements ApplicationContextAware {
         ServerBootstrap serverBootstrap = init();
 
         try {
-            logger.info("RPC服务启动中...");
+            log.info("RPC服务启动中...");
             // 服务地址
             InetAddress localHost = InetAddress.getLocalHost();
             String host = localHost.getHostAddress() + ":" + port;
@@ -116,10 +129,10 @@ public class RpcServer implements ApplicationContextAware {
             serviceRegistry.registerService(applicationName, host);
             // 开启心跳
             serviceRegistry.startHearBeat(applicationName, host);
-            logger.info("服务注册成功，服务名称：{}", applicationName);
+            log.info("服务注册成功，服务名称：{}", applicationName);
 
             int serviceCount = doServiceScan();
-            logger.info("接口实现类扫描完成，一共扫描到：{} 个服务实现类Bean", serviceCount);
+            log.info("接口实现类扫描完成，一共扫描到：{} 个服务实现类Bean", serviceCount);
 
             /*
                 如果没有扫描到服务实现类，表示该应用只作为客户端，不必启动服务器
@@ -128,14 +141,14 @@ public class RpcServer implements ApplicationContextAware {
                 // 启动服务器
                 ChannelFuture channelFuture = serverBootstrap.bind(Integer.parseInt(port)).sync();
                 if(channelFuture.isSuccess()){
-                    logger.info("RPC服务启动成功，服务地址:{}", host);
+                    log.info("RPC服务启动成功，服务地址:{}", host);
                 }
                 else{
-                    logger.info("RPC服务启动失败");
+                    log.info("RPC服务启动失败");
                 }
             }
         }catch (Exception e){
-            logger.error("服务启动异常", e);
+            log.error("服务启动异常", e);
         }
     }
 
@@ -147,9 +160,9 @@ public class RpcServer implements ApplicationContextAware {
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.context = applicationContext;
-        // Filter获取
+        // 获取用户自定义Filter
         Map<String, Filter> filters = applicationContext.getBeansOfType(Filter.class);
-        logger.info("共发现自定义过滤器：{} 个", filters.size());
+        log.info("共发现自定义过滤器：{} 个", filters.size());
         this.filters = new HashSet<>(filters.values());
     }
 
